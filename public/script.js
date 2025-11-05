@@ -239,6 +239,19 @@ function initWebSocket() {
       // Note: This handles late connections - if client connects 10+ minutes after host,
       // the host's peer might have closed, but we can recreate it when signals arrive
       if (!peer) {
+        // Check if we have a stale remote stream (from previous connection that closed)
+        const hasRemoteStream = remoteVideo && remoteVideo.srcObject;
+        if (hasRemoteStream) {
+          log("🔄 Clearing stale remote stream from previous connection...");
+          remoteVideo.srcObject = null;
+          remoteVideo.classList.remove("playing");
+          // Show waiting screen again for host
+          if (waitingScreen && isHost) {
+            waitingScreen.classList.remove("hidden");
+            waitingScreen.classList.add("host-streaming");
+          }
+        }
+        
         // For host (initiator) receiving answer when peer doesn't exist: this is likely a stale answer
         // from a previous connection. Ignore it and create peer to generate new offer.
         // For client (non-initiator): accept offers - we need them to connect
@@ -280,21 +293,44 @@ function initWebSocket() {
         log("📥 Processing signal:", data.type || "candidate");
         peer.signal(data);
       } catch (err) {
-        // If peer was destroyed, recreate it (but don't queue stale answers for host)
+        // If peer was destroyed, we need to handle reconnection
         if (err.message && err.message.includes("destroyed")) {
-          console.error("❌ Peer was destroyed, recreating...");
-          // Only queue non-answer signals for host, or all signals for client
-          if (data.type !== "answer" || !isHost) {
+          console.error("❌ Peer was destroyed, handling reconnection...");
+          
+          // Check if we have a stale remote stream (from previous connection)
+          const hasRemoteStream = remoteVideo && remoteVideo.srcObject;
+          if (hasRemoteStream && isHost) {
+            // Host: clear stale remote stream and recreate peer to generate new offer
+            log("🔄 Clearing stale remote stream from previous connection...");
+            remoteVideo.srcObject = null;
+            remoteVideo.classList.remove("playing");
+            // Show waiting screen again for host
+            if (waitingScreen) {
+              waitingScreen.classList.remove("hidden");
+              waitingScreen.classList.add("host-streaming");
+            }
+          }
+          
+          // For host receiving answer: ignore it, will generate new offer
+          // For client or other signals: queue them
+          if (data.type === "answer" && isHost) {
+            log("⚠️ Ignoring stale answer from previous connection (host will generate new offer)");
+            // Still recreate peer to generate new offer
+            if (localStream) {
+              createPeerConnection(localStream);
+            } else {
+              initPeer();
+            }
+          } else {
+            // Queue the signal for processing after peer is recreated
             if (!queuedIncomingSignals.includes(data)) {
               queuedIncomingSignals.push(data);
             }
-          } else {
-            log("⚠️ Not queuing stale answer for host (will generate new offer)");
-          }
-          if (localStream) {
-            createPeerConnection(localStream);
-          } else {
-            initPeer();
+            if (localStream) {
+              createPeerConnection(localStream);
+            } else {
+              initPeer();
+            }
           }
         } else {
           console.error("Error signaling peer:", err);
