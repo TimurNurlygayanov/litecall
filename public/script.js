@@ -135,7 +135,7 @@ function createPeerConnection(stream) {
   // Create peer connection
   peer = new SimplePeer({
     initiator: isHost,
-    trickle: false,
+    trickle: true,
     config: {
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
