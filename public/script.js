@@ -210,9 +210,28 @@ function createPeerConnection(stream) {
   peer.on("stream", (stream) => {
     console.log("🎬 Remote stream received");
     remoteVideo.srcObject = stream;
-    // Hide waiting screen when remote stream is received
-    if (waitingScreen && !waitingScreen.classList.contains("hidden")) {
-      waitingScreen.classList.add("hidden");
+    
+    // Wait for video to actually start playing before hiding waiting screen
+    // This prevents the black flash between waiting screen and video
+    const handleVideoPlaying = () => {
+      // Mark video as playing to change background
+      remoteVideo.classList.add("playing");
+      
+      // Hide waiting screen once video is actually playing
+      if (waitingScreen && !waitingScreen.classList.contains("hidden")) {
+        setTimeout(() => {
+          waitingScreen.classList.add("hidden");
+        }, 200);
+      }
+      remoteVideo.removeEventListener("playing", handleVideoPlaying);
+    };
+    
+    // Listen for when video actually starts playing
+    if (remoteVideo.readyState >= 3) {
+      // Video is already playing or about to play
+      handleVideoPlaying();
+    } else {
+      remoteVideo.addEventListener("playing", handleVideoPlaying);
     }
   });
 
@@ -339,8 +358,18 @@ let currentCameraIndex = 0;
 
 async function getAvailableCameras() {
   try {
+    // Enumerate devices - this requires camera permission to get labels
     const devices = await navigator.mediaDevices.enumerateDevices();
-    return devices.filter(device => device.kind === 'videoinput');
+    const cameras = devices.filter(device => device.kind === 'videoinput');
+    
+    // If we have device labels, we have permission
+    if (cameras.length > 0 && cameras[0].label) {
+      return cameras;
+    }
+    
+    // If no labels, we might not have permission yet
+    // Return empty array and permission will be requested when switching
+    return cameras;
   } catch (err) {
     console.error("Error enumerating cameras:", err);
     return [];
@@ -348,12 +377,35 @@ async function getAvailableCameras() {
 }
 
 async function switchCamera() {
-  if (!localStream || availableCameras.length < 2) return;
+  if (!localStream) return;
   
   try {
+    // Re-enumerate cameras to ensure we have the latest list with labels
+    // This should work without asking for permission again since we already have camera access
+    const cameras = await navigator.mediaDevices.enumerateDevices();
+    const videoInputs = cameras.filter(device => device.kind === 'videoinput');
+    
+    if (videoInputs.length < 2) {
+      console.log("📹 Only one camera available");
+      return;
+    }
+    
+    // Update available cameras list
+    availableCameras = videoInputs;
+    
+    // Get current camera ID
+    const currentTrack = localStream.getVideoTracks()[0];
+    const currentSettings = currentTrack.getSettings();
+    const currentCameraId = currentSettings.deviceId;
+    
+    // Find current camera index
+    const currentIndex = availableCameras.findIndex(cam => cam.deviceId === currentCameraId);
+    
     // Switch to next camera
-    currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
-    const newCameraId = availableCameras[currentCameraIndex].deviceId;
+    const nextIndex = (currentIndex + 1) % availableCameras.length;
+    const newCameraId = availableCameras[nextIndex].deviceId;
+    
+    console.log(`📹 Switching from camera ${currentIndex + 1} to ${nextIndex + 1}`);
     
     // Get new stream with selected camera
     const newStream = await navigator.mediaDevices.getUserMedia({
@@ -389,9 +441,21 @@ async function switchCamera() {
       if (track !== newVideoTrack) track.stop();
     });
     
-    console.log(`📹 Switched to camera: ${availableCameras[currentCameraIndex].label || 'Camera ' + (currentCameraIndex + 1)}`);
+    // Update current camera index
+    currentCameraIndex = nextIndex;
+    
+    console.log(`📹 Switched to camera: ${availableCameras[nextIndex].label || 'Camera ' + (nextIndex + 1)}`);
   } catch (err) {
     console.error("Error switching camera:", err);
+    // If switching fails, try to re-enumerate and show button if cameras are available
+    setTimeout(async () => {
+      const cameras = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = cameras.filter(device => device.kind === 'videoinput');
+      if (videoInputs.length > 1 && btnSwitchCamera) {
+        availableCameras = videoInputs;
+        btnSwitchCamera.style.display = "block";
+      }
+    }, 1000);
   }
 }
 
