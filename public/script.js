@@ -736,10 +736,32 @@ function createPeerConnection(stream) {
     
     remoteVideo.srcObject = stream;
     
-    // Ensure video plays with audio
-    remoteVideo.muted = false;
-    remoteVideo.play().catch(err => {
+    // On mobile, videos need to be muted initially to autoplay (browser autoplay policy)
+    // We'll unmute after it starts playing
+    remoteVideo.muted = true;
+    
+    // Try to play immediately
+    remoteVideo.play().then(() => {
+      log("✅ Remote video started playing");
+      // Once playing, try to unmute (may fail on mobile due to autoplay policy, but worth trying)
+      remoteVideo.muted = false;
+      // Try to play again after unmuting (some browsers need this)
+      remoteVideo.play().catch(() => {
+        // Silent fail - video is playing, just muted due to autoplay policy
+        logWarn("⚠️ Remote video is muted due to browser autoplay policy");
+      });
+    }).catch(err => {
       console.error("Error playing remote video:", err);
+      // On mobile, try muted first if unmuted failed
+      if (!remoteVideo.muted) {
+        log("🔄 Retrying with muted video...");
+        remoteVideo.muted = true;
+        remoteVideo.play().then(() => {
+          log("✅ Remote video playing (muted)");
+        }).catch(err2 => {
+          console.error("Error playing remote video (muted):", err2);
+        });
+      }
     });
     
     // Cleanup previous handler if exists
@@ -759,7 +781,14 @@ function createPeerConnection(stream) {
     
     // Listen for when video actually starts playing to ensure smooth transition
     videoPlayingHandler = () => {
-      // Video is confirmed playing - ensure it's visible
+      // Video is confirmed playing - try to unmute if still muted
+      if (remoteVideo.muted) {
+        remoteVideo.muted = false;
+        remoteVideo.play().catch(() => {
+          // Silent fail - video is playing, user may need to interact to unmute
+        });
+      }
+      // Ensure it's visible
       remoteVideo.classList.add("playing");
       
       // Cleanup handler
@@ -1024,14 +1053,46 @@ async function switchToCamera(deviceId) {
     log(`📹 Switching to camera: ${deviceId}`);
     
     // Get new video track with selected camera
-    // Reuse existing audio track - don't request new audio to avoid permission prompts
-    const newStream = await navigator.mediaDevices.getUserMedia({
-      video: { 
-        deviceId: { exact: deviceId },
-        ...CONFIG.VIDEO
-      },
-      audio: false, // Don't request audio - we'll keep the existing audio track
-    });
+    // On mobile, we need to be more flexible with deviceId constraints
+    // Try with ideal first (more flexible), then fall back to exact if needed
+    let newStream;
+    try {
+      // First try with ideal constraint (more flexible, works better on mobile)
+      newStream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          deviceId: { ideal: deviceId },
+          ...CONFIG.VIDEO
+        },
+        audio: false, // Don't request audio - we'll keep the existing audio track
+      });
+      
+      // Verify we got the correct camera
+      const newTrack = newStream.getVideoTracks()[0];
+      const newSettings = newTrack?.getSettings();
+      if (newSettings?.deviceId !== deviceId) {
+        logWarn("⚠️ Got different camera with ideal constraint, trying exact...");
+        // Stop the wrong stream
+        newStream.getTracks().forEach(track => track.stop());
+        // Try with exact constraint
+        newStream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            deviceId: { exact: deviceId },
+            ...CONFIG.VIDEO
+          },
+          audio: false,
+        });
+      }
+    } catch (err) {
+      // If ideal failed, try exact constraint
+      logWarn("⚠️ Ideal constraint failed, trying exact...");
+      newStream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          deviceId: { exact: deviceId },
+          ...CONFIG.VIDEO
+        },
+        audio: false,
+      });
+    }
     
     const newVideoTrack = newStream.getVideoTracks()[0];
     if (!newVideoTrack) {
