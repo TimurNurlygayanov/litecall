@@ -9,8 +9,8 @@
   <link rel="alternate icon" href="/favicon.svg" />
   
   <!-- Primary Meta Tags -->
-  <title>LiteCall - Free Private Peer-to-Peer Video Calls</title>
-  <meta name="title" content="LiteCall - Free Private Peer-to-Peer Video Calls" />
+  <title>LiteCall - Free Private Video Calls</title>
+  <meta name="title" content="LiteCall - Free Private Video Calls" />
   <meta name="description" content="Free and secure peer-to-peer 1:1 video calls. No authentication required, no tracking, no cookies. Private, secure, and free video calling service." />
   <meta name="keywords" content="video calls, peer to peer, free video chat, secure calls, private video calls, webRTC, online meetings, video conferencing" />
   <meta name="author" content="Timur Nurlygaianov" />
@@ -21,14 +21,14 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://litecall.app/" />
-  <meta property="og:title" content="LiteCall - Free Private Peer-to-Peer Video Calls" />
+  <meta property="og:title" content="LiteCall - Free Private Video Calls" />
   <meta property="og:description" content="Free and secure peer-to-peer 1:1 video calls. No authentication required, no tracking, no cookies. Private, secure, and free." />
   <meta property="og:site_name" content="LiteCall" />
   
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:url" content="https://litecall.app/" />
-  <meta property="twitter:title" content="LiteCall - Free Private Peer-to-Peer Video Calls" />
+  <meta property="twitter:title" content="LiteCall - Free Private Video Calls" />
   <meta property="twitter:description" content="Free and secure peer-to-peer 1:1 video calls. No authentication required, no tracking, no cookies. Private, secure, and free." />
   <style>
     * {
@@ -48,6 +48,8 @@
       background: #ffffff;
       color: #333;
       overflow-x: hidden;
+      font-size: 16px;
+      line-height: 1.6;
     }
 
     .page {
@@ -62,7 +64,26 @@
     }
 
     .page-1 {
-      background: #ffffff;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .page-1::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    
+    .page-1 > * {
+      position: relative;
+      z-index: 1;
     }
 
     .page-2 {
@@ -76,36 +97,58 @@
     }
 
     h1 {
-      font-size: 2.5rem;
-      margin-bottom: 2rem;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      margin-bottom: 1.5rem;
       text-align: center;
-      color: #333;
+      font-weight: 700;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+    
+    .page-1 h1 {
+      color: #fff;
+      margin-bottom: 1rem;
+      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .page-1 .subtitle {
+      font-size: clamp(1rem, 2.5vw, 1.25rem);
+      text-align: center;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 3rem;
+      font-weight: 300;
+      max-width: 600px;
     }
 
     button {
-      padding: 1em 2em;
-      font-size: 18px;
+      padding: 1.1em 2.5em;
+      font-size: 1.1rem;
+      font-weight: 600;
       border: none;
-      border-radius: 10px;
-      background: #00bfa6;
-      color: white;
+      border-radius: 12px;
+      background: #fff;
+      color: #667eea;
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      letter-spacing: 0.02em;
     }
 
     button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 191, 166, 0.3);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+      background: #f8f9fa;
     }
 
     button:active {
-      transform: translateY(0);
+      transform: translateY(-1px);
     }
 
     #counter {
-      margin-top: 20px;
-      font-size: 16px;
-      color: #666;
+      margin-top: 2rem;
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 300;
     }
 
     .features {
@@ -115,11 +158,12 @@
     }
 
     .features h2 {
-      font-size: 2.5rem;
-      margin-bottom: 3rem;
+      font-size: clamp(1.75rem, 4vw, 2.25rem);
+      margin-bottom: 2.5rem;
       text-align: center;
-      font-weight: 300;
-      letter-spacing: -0.5px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: 1.3;
     }
     
     .page-2 .features h2 {
@@ -132,12 +176,12 @@
 
     .features-list {
       list-style: none;
-      font-size: 1.3rem;
-      line-height: 2.2;
+      font-size: 1.1rem;
+      line-height: 1.8;
     }
 
     .features-list li {
-      margin: 1.5rem 0;
+      margin: 1.25rem 0;
       padding-left: 2.5rem;
       position: relative;
       color: rgba(255, 255, 255, 0.95);
@@ -156,9 +200,10 @@
       margin-top: 2.5rem;
       padding-top: 2rem;
       border-top: 1px solid rgba(255, 255, 255, 0.2);
-      font-size: 1.5rem;
-      font-weight: 600;
+      font-size: 1.25rem;
+      font-weight: 500;
       color: #fff;
+      line-height: 1.6;
     }
 
     .features-list li:last-child::before {
@@ -169,8 +214,12 @@
       margin-top: 3rem;
       padding-top: 2rem;
       text-align: left;
-      font-size: 0.95rem;
+      font-size: 1rem;
       line-height: 1.8;
+    }
+    
+    .footer p {
+      margin: 0.75rem 0;
     }
     
     .page-2 .footer {
@@ -204,12 +253,18 @@
 
     .scroll-indicator {
       position: fixed;
-      bottom: 20px;
+      bottom: 30px;
       left: 50%;
       transform: translateX(-50%);
-      color: #666;
-      font-size: 14px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.9rem;
+      font-weight: 300;
       animation: bounce 2s infinite;
+      opacity: 0.8;
+    }
+    
+    .page-1 .scroll-indicator {
+      color: rgba(255, 255, 255, 0.9);
     }
 
     @keyframes bounce {
@@ -218,22 +273,38 @@
     }
 
     @media (max-width: 768px) {
-      h1 {
-        font-size: 2rem;
+      .page {
+        padding: 1.5rem;
+      }
+      .features {
+        padding: 2rem 1.5rem;
       }
       .features h2 {
-        font-size: 2rem;
+        margin-bottom: 2rem;
       }
       .features-list {
-        font-size: 1.1rem;
+        font-size: 1rem;
+        line-height: 1.7;
+      }
+      .features-list li {
+        margin: 1rem 0;
       }
       .features-list li:last-child {
-        font-size: 1.3rem;
-      }
-      .footer {
-        font-size: 0.85rem;
+        font-size: 1.1rem;
         margin-top: 2rem;
         padding-top: 1.5rem;
+      }
+      .footer {
+        font-size: 0.9rem;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+      }
+      button {
+        padding: 1em 2em;
+        font-size: 1rem;
+      }
+      #counter {
+        font-size: 0.9rem;
       }
     }
   </style>
@@ -241,8 +312,9 @@
 <body>
   <!-- First Page -->
   <div class="page page-1">
-    <h1>Private and free 1:1 video calls</h1>
-    <button id="create">Start a call</button>
+    <h1>Free Private Video Calls</h1>
+    <p class="subtitle">Secure peer-to-peer conversations. No sign-up, no tracking, no limits.</p>
+    <button id="create">Start a Call</button>
     <div id="counter"></div>
     <div class="scroll-indicator">Scroll down to learn more</div>
   </div>
@@ -283,14 +355,21 @@
     };
 
     async function updateCounter() {
-      const res = await fetch("/stats");
-      const data = await res.json();
-      document.getElementById("counter").textContent =
-        `Total calls done: ${data.successful}`;
+      try {
+        const res = await fetch("/stats");
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById("counter").textContent =
+            `Total calls done: ${data.successful}`;
+        }
+      } catch (err) {
+        // Silently fail - counter is not critical
+        console.debug("Counter update failed:", err);
+      }
     }
 
+    // Update counter once on page load (no need to keep updating)
     updateCounter();
-    setInterval(updateCounter, 50);
 
     // Hide scroll indicator when user scrolls
     let scrollIndicator = document.querySelector('.scroll-indicator');
