@@ -132,6 +132,7 @@ function initPeer() {
 }
 
 function createPeerConnection(stream) {
+  // Create peer connection
   peer = new SimplePeer({
     initiator: isHost,
     trickle: false,
@@ -149,19 +150,7 @@ function createPeerConnection(stream) {
 
   console.log("🔧 New peer created. Initiator =", isHost);
 
-  // Add stream immediately, before any signaling starts
-  peer.addStream(stream);
-  console.log("📹 Stream added to peer connection");
-
-  // Process any queued incoming signals
-  if (queuedIncomingSignals.length > 0) {
-    console.log(`🚚 Processing ${queuedIncomingSignals.length} queued incoming signals...`);
-    queuedIncomingSignals.forEach((signal) => {
-      peer.signal(signal);
-    });
-    queuedIncomingSignals = [];
-  }
-
+  // Set up ALL event handlers FIRST, before adding stream or processing signals
   peer.on("signal", (data) => {
       const msg = JSON.stringify(data);
       console.log("📤 Sending signal:", data.type);
@@ -194,6 +183,29 @@ function createPeerConnection(stream) {
 
   peer.on("iceStateChange", (state) => console.log("🧊 ICE state:", state));
   peer.on("iceConnectionStateChange", (state) => console.log("🧊 ICE conn:", state));
+
+  // Add stream after all handlers are set up
+  peer.addStream(stream);
+  console.log("📹 Stream added to peer connection");
+
+  // Process any queued incoming signals after peer is fully initialized
+  // Use Promise.resolve().then() to ensure it happens after current execution context
+  if (queuedIncomingSignals.length > 0) {
+    console.log(`🚚 Processing ${queuedIncomingSignals.length} queued incoming signals...`);
+    Promise.resolve().then(() => {
+      // Process signals in order
+      const signalsToProcess = [...queuedIncomingSignals];
+      queuedIncomingSignals = [];
+      signalsToProcess.forEach((signal) => {
+        try {
+          console.log("📥 Processing queued signal:", signal.type || "candidate");
+          peer.signal(signal);
+        } catch (err) {
+          console.error("Error processing queued signal:", err);
+        }
+      });
+    });
+  }
 }
 
 // ====== Start ======
