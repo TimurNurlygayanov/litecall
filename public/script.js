@@ -60,9 +60,15 @@ function initWebSocket() {
         console.log("🕓 Incoming signal queued (peer not ready yet):", data.type || "candidate");
         queuedIncomingSignals.push(data);
         // Start peer creation if not already in progress
+        // Important: check if we're currently getting media (localStream being set)
+        // If localStream exists but peer doesn't, we still need to create peer
         if (!localStream) {
           console.log("⚙️ Creating peer to process queued signals...");
           initPeer();
+        } else {
+          // Stream exists but peer doesn't - create peer immediately
+          console.log("⚙️ Stream exists but peer missing, creating peer...");
+          createPeerConnection(localStream);
         }
         return;
       }
@@ -188,22 +194,20 @@ function createPeerConnection(stream) {
   peer.addStream(stream);
   console.log("📹 Stream added to peer connection");
 
-  // Process any queued incoming signals after peer is fully initialized
-  // Use Promise.resolve().then() to ensure it happens after current execution context
+  // Process any queued incoming signals IMMEDIATELY and SYNCHRONOUSLY
+  // This is critical - signals must be processed right away, not async
   if (queuedIncomingSignals.length > 0) {
-    console.log(`🚚 Processing ${queuedIncomingSignals.length} queued incoming signals...`);
-    Promise.resolve().then(() => {
-      // Process signals in order
-      const signalsToProcess = [...queuedIncomingSignals];
-      queuedIncomingSignals = [];
-      signalsToProcess.forEach((signal) => {
-        try {
-          console.log("📥 Processing queued signal:", signal.type || "candidate");
-          peer.signal(signal);
-        } catch (err) {
-          console.error("Error processing queued signal:", err);
-        }
-      });
+    console.log(`🚚 Processing ${queuedIncomingSignals.length} queued incoming signals immediately...`);
+    // Process signals synchronously, in order
+    const signalsToProcess = [...queuedIncomingSignals];
+    queuedIncomingSignals = [];
+    signalsToProcess.forEach((signal) => {
+      try {
+        console.log("📥 Processing queued signal:", signal.type || "candidate");
+        peer.signal(signal);
+      } catch (err) {
+        console.error("Error processing queued signal:", err);
+      }
     });
   }
 }
