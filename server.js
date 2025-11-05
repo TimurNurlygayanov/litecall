@@ -77,6 +77,7 @@ wss.on("connection", (ws, req) => {
       for (const client of connections[roomId]) {
         if (client !== ws && client.readyState === 1) {
           client.send(messageText);
+          console.log(`📡 signal relayed in room ${roomId}:`, messageText.slice(0,100));
         }
       }
   });

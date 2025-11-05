@@ -101,9 +101,27 @@ function initPeer() {
     initiator: isHost,
     trickle: false,
     config: {
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        {
+          urls: "turn:relay1.expressturn.com:3478",
+          username: "ef-test",
+          credential: "ef-test"
+        }
+      ]
     },
   });
+
+  console.log("🔧 New peer created. Initiator =", isHost);
+
+  peer.on("signal", (data) => {
+      console.log("📤 Sending signal:", data.type);
+      const msg = JSON.stringify(data);
+      safeSend(msg);
+  });
+
+  peer.on("iceStateChange", (state) => console.log("🧊 ICE state:", state));
+  peer.on("iceConnectionStateChange", (state) => console.log("🧊 ICE conn:", state));
 
   if (!localStream) {
     navigator.mediaDevices
