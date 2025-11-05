@@ -47,7 +47,7 @@ const server = app.listen(PORT, () =>
 const wss = new WebSocketServer({ server });
 
 wss.on("connection", (ws, req) => {
-  // Безопасно парсим URL независимо от домена
+  // === Определяем комнату ===
   const parsedUrl = url.parse(req.url, true);
   const roomId = parsedUrl.query.room;
 
@@ -57,32 +57,52 @@ wss.on("connection", (ws, req) => {
     return;
   }
 
-  // Добавляем клиента в комнату
   if (!connections[roomId]) connections[roomId] = [];
   connections[roomId].push(ws);
-
   console.log(`👥 Client joined room "${roomId}" (${connections[roomId].length} total)`);
 
-  // Если в комнате теперь двое — считаем звонок успешным
+  // === Увеличиваем счётчик успешных звонков ===
   if (connections[roomId].length === 2) {
-    const data = JSON.parse(fs.readFileSync(callsFile));
-    data.successful += 1;
-    fs.writeFileSync(callsFile, JSON.stringify(data));
-    console.log(`📈 Successful calls: ${data.successful}`);
+    try {
+      const data = JSON.parse(fs.readFileSync(callsFile, "utf8"));
+      data.successful += 1;
+      fs.writeFileSync(callsFile, JSON.stringify(data));
+      console.log(`📈 Successful calls: ${data.successful}`);
+    } catch (e) {
+      console.error("❌ Failed to update call counter:", e);
+    }
   }
 
-  // Пересылаем сигналы между участниками
+  // === Пересылка сигналов ===
   ws.on("message", (msg) => {
-      const messageText = typeof msg === "string" ? msg : msg.toString();
-      for (const client of connections[roomId]) {
-        if (client !== ws && client.readyState === 1) {
-          client.send(messageText);
-          console.log(`📡 signal relayed in room ${roomId}:`, messageText.slice(0,100));
-        }
+    const text = typeof msg === "string" ? msg : msg.toString();
+
+    // Проверяем что это JSON
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      console.warn("⚠️ Non-JSON WS message, skipping:", text.slice(0, 60));
+      return;
+    }
+
+    // Проверяем тип сигнала
+    if (!parsed.type && !parsed.candidate) {
+      console.warn("⚠️ Unknown message structure:", parsed);
+      return;
+    }
+
+    console.log(`📡 signal relayed in room "${roomId}" → ${parsed.type || "candidate"}`);
+
+    // Отправляем всем, кроме отправителя
+    for (const client of connections[roomId]) {
+      if (client !== ws && client.readyState === 1) {
+        client.send(JSON.stringify(parsed));
       }
+    }
   });
 
-  // Когда клиент отключается
+  // === Очистка при отключении ===
   ws.on("close", () => {
     connections[roomId] = connections[roomId].filter((c) => c !== ws);
     if (connections[roomId].length === 0) delete connections[roomId];
