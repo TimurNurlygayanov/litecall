@@ -277,13 +277,21 @@ window.addEventListener("pagehide", cleanup);
 
 // ====== Peer setup ======
 function initPeer() {
+  // Don't start if already recreating
+  if (isRecreatingPeer) {
+    log("⚠️ Already recreating peer, skipping...");
+    return;
+  }
+  
   if (peer) {
     try {
-      peer.destroy();
+      const oldPeer = peer;
+      peer = null; // Set to null first to prevent close handler from recreating
+      oldPeer.destroy();
     } catch (_) {}
-    peer = null;
   }
-  isRecreatingPeer = false; // Reset flag when starting new peer
+  
+  // Reset flags when starting new peer
   hasConnected = false; // Reset connection status for new peer
 
   // Get or reuse stream FIRST, then create peer connection
@@ -341,9 +349,10 @@ function createPeerConnection(stream) {
   // Cleanup existing peer if any
   if (peer) {
     try {
-      peer.destroy();
+      const oldPeer = peer;
+      peer = null; // Set to null first to prevent close handler from recreating
+      oldPeer.destroy();
     } catch (_) {}
-    peer = null;
   }
   
   // Create peer connection
@@ -423,30 +432,62 @@ function createPeerConnection(stream) {
 
   peer.on("error", (err) => {
     console.error("❌ Peer error:", err);
-    // Handle connection failures - recreate peer
-    if (err.message.includes("Abort") || 
-        err.message.includes("destroyed") || 
-        err.message.includes("Connection failed")) {
-      log("♻️ Recreating peer due to error...");
-        if (!isRecreatingPeer && ws && ws.readyState === WebSocket.OPEN) {
+    // Only recreate on critical errors, not transient connection failures
+    // "Connection failed" can happen during normal negotiation - let it recover
+    if (err.message.includes("Abort") || err.message.includes("destroyed")) {
+      log("♻️ Recreating peer due to critical error...");
+      if (!isRecreatingPeer && ws && ws.readyState === WebSocket.OPEN) {
         isRecreatingPeer = true;
         setTimeout(() => {
           isRecreatingPeer = false;
           initPeer();
         }, CONFIG.PEER_RECREATE_DELAY);
       }
+    } else if (err.message.includes("Connection failed")) {
+      // Connection failed - wait a bit longer before recreating, might recover
+      log("⚠️ Connection failed, waiting to see if it recovers...");
+      if (!isRecreatingPeer && !hasConnected && ws && ws.readyState === WebSocket.OPEN) {
+        // Only recreate if we haven't connected yet and after a longer delay
+        isRecreatingPeer = true;
+        setTimeout(() => {
+          if (!hasConnected) {
+            log("♻️ Connection didn't recover, recreating peer...");
+            isRecreatingPeer = false;
+            initPeer();
+          } else {
+            isRecreatingPeer = false;
+          }
+        }, CONFIG.PEER_RECREATE_DELAY * 3); // Longer delay for connection failures
+      }
     }
   });
 
   peer.on("close", () => {
     logWarn("🔌 Peer closed");
-    // Only recreate if we're still connected via WebSocket
-    if (!isRecreatingPeer && ws && ws.readyState === WebSocket.OPEN) {
+    // Don't recreate if peer was set to null (intentionally destroyed)
+    // Don't recreate if we're already recreating
+    // Don't recreate if we've successfully connected before
+    if (!peer || isRecreatingPeer || hasConnected) {
+      return;
+    }
+    
+    // Only recreate if WebSocket is still open and we haven't connected
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      const currentPeer = peer;
+      const queuedSignalsCount = queuedIncomingSignals.length;
+      logWarn(`🔌 Peer closed. Queued signals: ${queuedSignalsCount}`);
+      
       isRecreatingPeer = true;
       setTimeout(() => {
-        isRecreatingPeer = false;
-        initPeer();
-      }, CONFIG.PEER_RECREATE_DELAY * 2); // Slightly longer delay for close events
+        // Only recreate if this is still the current peer (wasn't destroyed) and we haven't connected
+        if (currentPeer && currentPeer === peer && !hasConnected) {
+          logWarn("🔌 Peer closed without connecting, recreating...");
+          isRecreatingPeer = false;
+          initPeer();
+        } else {
+          isRecreatingPeer = false;
+        }
+      }, CONFIG.PEER_RECREATE_DELAY * 3); // Longer delay to avoid recreation loops
     }
   });
 
@@ -460,29 +501,54 @@ function createPeerConnection(stream) {
     // Handle successful connection
     if (state === "connected" || state === "completed") {
       hasConnected = true;
+      log("✅ ICE connection established!");
+      return;
+    }
+    
+    // Handle "connecting" state - this is good, connection is being established
+    if (state === "connecting") {
+      log("🔄 ICE connecting...");
+      return;
+    }
+    
+    // "disconnected" is a normal intermediate state - allow it to recover
+    if (state === "disconnected") {
+      log("⚠️ ICE disconnected (may recover)...");
       return;
     }
     
     // Only recreate on "failed" state - never on "disconnected"
-    // "disconnected" is a normal intermediate state during connection establishment
-    // and should be allowed to recover naturally
+    // "failed" means the connection definitely won't work
     if (state === "failed" && !isRecreatingPeer && !hasConnected) {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        log(`♻️ ICE connection failed, recreating peer...`);
+      if (ws && ws.readyState === WebSocket.OPEN && peer) {
+        log(`♻️ ICE connection failed, will recreate peer after delay...`);
         isRecreatingPeer = true;
         setTimeout(() => {
-          isRecreatingPeer = false;
-          initPeer();
-        }, CONFIG.PEER_RECREATE_DELAY);
+          if (!hasConnected && peer) {
+            log(`♻️ ICE connection failed, recreating peer...`);
+            isRecreatingPeer = false;
+            initPeer();
+          } else {
+            isRecreatingPeer = false;
+          }
+        }, CONFIG.PEER_RECREATE_DELAY * 2); // Longer delay for ICE failures
       }
     }
-    // Note: We intentionally do NOT handle "disconnected" state
-    // It's a normal intermediate state and should recover on its own
   });
 
   // Add stream after all handlers are set up
+  // For initiator (host), this will trigger offer generation
+  // For non-initiator (client), this prepares peer to receive offer
   peer.addStream(stream);
   log("📹 Stream added to peer connection");
+  
+  // If we're the initiator (host), SimplePeer will automatically generate an offer
+  // If we're not the initiator (client), we wait for the offer from the host
+  if (isHost) {
+    log("📤 Host: Waiting for offer to be generated...");
+  } else {
+    log("📥 Client: Waiting for offer from host...");
+  }
 
   // Process any queued incoming signals IMMEDIATELY and SYNCHRONOUSLY
   // This is critical - signals must be processed right away for fastest connection
@@ -493,11 +559,15 @@ function createPeerConnection(stream) {
     queuedIncomingSignals = [];
     signalsToProcess.forEach((signal) => {
       try {
+        log(`📥 Processing queued signal: ${signal.type || 'candidate'}`);
         peer.signal(signal);
       } catch (err) {
         console.error("Error processing queued signal:", err);
       }
     });
+    log(`✅ Finished processing ${signalsToProcess.length} queued signals`);
+  } else {
+    log(`📋 No queued signals to process (${queuedIncomingSignals.length} queued)`);
   }
 }
 
