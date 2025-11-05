@@ -127,6 +127,27 @@
       display: none;
     }
 
+    .footer {
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      text-align: center;
+      font-size: 0.95rem;
+      line-height: 1.8;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .footer a {
+      color: #00bfa6;
+      text-decoration: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .footer a:hover {
+      opacity: 0.8;
+      text-decoration: underline;
+    }
+
     .scroll-indicator {
       position: fixed;
       bottom: 20px;
@@ -155,6 +176,11 @@
       .features-list li:last-child {
         font-size: 1.3rem;
       }
+      .footer {
+        font-size: 0.85rem;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+      }
     }
   </style>
 </head>
@@ -170,15 +196,19 @@
   <!-- Second Page -->
   <div class="page page-2">
     <div class="features">
-      <h2>Why Choose Us</h2>
+      <h2>What Is LiteCall App</h2>
       <ul class="features-list">
-        <li>We provide free peer-to-peer 1:1 meetings</li>
-        <li>We do not require any authentification</li>
-        <li>We do not track location & user data</li>
-        <li>We do not use cookies</li>
+        <li>LiteCall App provides free peer-to-peer 1:1 meetings</li>
+        <li>LiteCall App does not require any authentification</li>
+        <li>LiteCall App does not track location & user data</li>
+        <li>LiteCall App does not use cookies</li>
         <li>All calls are secure with SSL encription</li>
         <li>So it is private, secure and free</li>
       </ul>
+      <div class="footer">
+        <p>Created by <a href="https://www.linkedin.com/in/timur-nurlygaianov/" target="_blank" rel="noopener noreferrer">Timur Nurlygaianov</a></p>
+        <p>Want to contribute? Fix bugs or add features by contributing to <a href="https://github.com/TimurNurlygayanov/litecall" target="_blank" rel="noopener noreferrer">GitHub</a></p>
+      </div>
     </div>
   </div>
 
