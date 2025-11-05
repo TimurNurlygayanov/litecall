@@ -97,6 +97,34 @@ function initPeer() {
     } catch (_) {}
   }
 
+  // Get or reuse stream FIRST, then create peer connection
+  if (!localStream) {
+    console.log("🎥 Requesting media stream...");
+    navigator.mediaDevices
+      .getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      })
+      .then((stream) => {
+        localStream = stream;
+        localVideo.srcObject = stream;
+        console.log("🎥 Local stream ready, creating peer connection...");
+        createPeerConnection(stream);
+      })
+      .catch((err) => {
+        console.error("getUserMedia error:", err);
+      });
+  } else {
+    console.log("🎥 Reusing existing stream, creating peer connection...");
+    createPeerConnection(localStream);
+  }
+}
+
+function createPeerConnection(stream) {
   peer = new SimplePeer({
     initiator: isHost,
     trickle: false,
@@ -114,39 +142,14 @@ function initPeer() {
 
   console.log("🔧 New peer created. Initiator =", isHost);
 
+  // Add stream immediately, before any signaling starts
+  peer.addStream(stream);
+  console.log("📹 Stream added to peer connection");
+
   peer.on("signal", (data) => {
-      console.log("📤 Sending signal:", data.type);
       const msg = JSON.stringify(data);
+      console.log("📤 Sending signal:", data.type);
       safeSend(msg);
-  });
-
-  peer.on("iceStateChange", (state) => console.log("🧊 ICE state:", state));
-  peer.on("iceConnectionStateChange", (state) => console.log("🧊 ICE conn:", state));
-
-  if (!localStream) {
-    navigator.mediaDevices
-      .getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      })
-      .then((stream) => {
-        localStream = stream;
-        localVideo.srcObject = stream;
-        peer.addStream(stream);
-        console.log("🎥 local stream ready");
-      })
-      .catch((err) => console.error("getUserMedia error:", err));
-  } else {
-    peer.addStream(localStream);
-  }
-
-  peer.on("signal", (data) => {
-    const msg = JSON.stringify(data);
-    safeSend(msg);
   });
 
   peer.on("connect", () => {
@@ -172,6 +175,9 @@ function initPeer() {
     // при закрытии тоже пересоздаём
     setTimeout(() => initPeer(), 1500);
   });
+
+  peer.on("iceStateChange", (state) => console.log("🧊 ICE state:", state));
+  peer.on("iceConnectionStateChange", (state) => console.log("🧊 ICE conn:", state));
 }
 
 // ====== Start ======
