@@ -105,12 +105,8 @@ function initWebSocket() {
     log("✅ WS open");
     reconnectAttempts = 0;
     flushQueue();
-    // Start getting media stream IMMEDIATELY - don't wait for room-info
-    // This allows us to start peer connection as soon as possible
-    if (!localStream && !peer) {
-      log("⚡ Starting media stream immediately...");
-      initPeer();
-    }
+    // Wait for room-info to determine host/client role before starting peer
+    // The room-info will be sent immediately by the server
   });
 
   ws.addEventListener("message", (event) => {
@@ -133,15 +129,14 @@ function initWebSocket() {
           }
         }
         
-        // If we have a stream but no peer yet, create peer connection immediately
-        // (Media stream should already be starting from WebSocket open event)
-        if (localStream && !peer) {
+        // Now that we know our role, start getting media and creating peer connection
+        if (!peer && !localStream) {
+          log(`⚙️ ${isHost ? "Host" : "Client"} detected, starting peer setup...`);
+          initPeer();
+        } else if (localStream && !peer) {
+          // Stream already exists, create peer connection immediately
           log(`⚡ Creating peer connection with existing stream...`);
           createPeerConnection(localStream);
-        } else if (!localStream && !peer) {
-          // Fallback: if stream not ready yet, start it now
-          log(`⚙️ Starting peer setup (fallback)...`);
-          initPeer();
         }
         return;
       }
