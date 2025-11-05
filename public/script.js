@@ -131,9 +131,16 @@ function initWebSocket() {
             localVideo.style.display = "block";
           }
           
-          // For host: hide waiting screen and show controls once stream is ready
-          // We'll know if we're host when room-info arrives, but for now show video
-          // The waiting screen will be hidden when we confirm we're the host
+          // If we're the host (will be confirmed by room-info), make waiting screen semi-transparent
+          // so the video shows through while keeping the link widget visible
+          if (waitingScreen && !waitingScreen.classList.contains("hidden")) {
+            waitingScreen.classList.add("host-streaming");
+            log("✨ Making waiting screen semi-transparent so video shows through");
+          }
+          
+          // Keep waiting screen visible - don't hide it yet
+          // For host: we'll keep it visible until client joins (so they can share the link)
+          // For client: it will be hidden when they connect or when room-info confirms host is active
           
           // Clear any existing timeout
           if (cameraEnumTimeout) {
@@ -181,6 +188,11 @@ function initWebSocket() {
         if (isHost && waitingScreen) {
           log("👤 Host detected, showing controls but keeping link widget visible...");
           // Don't hide waiting screen yet - keep it visible so host can share the link
+          // Make it semi-transparent so local video shows through
+          if (localStream) {
+            waitingScreen.classList.add("host-streaming");
+            log("✨ Making waiting screen semi-transparent so video shows through");
+          }
           // It will be hidden when remote stream is received or when client joins
           // Ensure controls are visible
           if (controls) {
@@ -248,11 +260,37 @@ function initWebSocket() {
       }
       
       // Peer exists - process signal immediately
+      // But check if peer was destroyed (can happen during reconnection)
+      if (!peer) {
+        // Peer was destroyed between check and here - recreate it
+        log("🔄 Peer was destroyed, recreating to process signal...");
+        queuedIncomingSignals.push(data);
+        if (localStream) {
+          createPeerConnection(localStream);
+        } else {
+          initPeer();
+        }
+        return;
+      }
+      
       try {
         log("📥 Processing signal:", data.type || "candidate");
         peer.signal(data);
       } catch (err) {
-        console.error("Error signaling peer:", err);
+        // If peer was destroyed, recreate it and queue the signal
+        if (err.message && err.message.includes("destroyed")) {
+          console.error("❌ Peer was destroyed, recreating...");
+          if (!queuedIncomingSignals.includes(data)) {
+            queuedIncomingSignals.push(data);
+          }
+          if (localStream) {
+            createPeerConnection(localStream);
+          } else {
+            initPeer();
+          }
+        } else {
+          console.error("Error signaling peer:", err);
+        }
       }
     } catch (err) {
       console.error("WS message parse error:", err);
@@ -392,13 +430,11 @@ function initPeer() {
           localVideo.style.display = "block";
         }
         
-        // For host: hide waiting screen and show controls once stream is ready
-        if (isHost && waitingScreen) {
-          waitingScreen.classList.add("hidden");
-          if (controls) {
-            controls.style.display = "flex";
-            controls.style.visibility = "visible";
-          }
+        // For host: show controls but KEEP waiting screen visible (so they can share link)
+        // Don't hide waiting screen here - it will be hidden when client joins
+        if (isHost && controls) {
+          controls.style.display = "flex";
+          controls.style.visibility = "visible";
         }
         
         // Clear any existing timeout

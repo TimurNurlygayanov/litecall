@@ -76,6 +76,12 @@
       display: none; /* Completely remove from layout when hidden */
     }
 
+    /* When host is streaming, make background semi-transparent so video shows through */
+    #waiting-screen.host-streaming {
+      background: rgba(102, 126, 234, 0.85); /* Semi-transparent purple */
+      backdrop-filter: blur(10px);
+    }
+
     .waiting-content {
       text-align: center;
       max-width: 600px;
