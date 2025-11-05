@@ -68,28 +68,30 @@ wss.on("connection", (ws, req) => {
     ws.send(JSON.stringify(lastSignals[roomId]));
   }
 
-  ws.on("message", (msg, isBinary) => {
-    const messageText = isBinary ? msg.toString() : msg;
-    let parsed;
-    try {
-      parsed = JSON.parse(messageText);
-    } catch (err) {
-      console.error("❌ Invalid JSON:", err);
-      return;
-    }
+  ws.on("message", (msg) => {
+      // Always convert to string explicitly
+      const messageText = Buffer.isBuffer(msg) ? msg.toString() : msg.toString();
 
-    // If it's an offer or answer, store it
-    if (parsed.type === "offer" || parsed.type === "answer") {
-      lastSignals[roomId] = parsed;
-    }
-
-    // Relay to other peers
-    for (const client of connections[roomId]) {
-      if (client !== ws && client.readyState === 1) {
-        client.send(messageText);
+      let parsed;
+      try {
+        parsed = JSON.parse(messageText);
+      } catch (err) {
+        console.error("❌ Invalid JSON in message:", err, messageText);
+        return;
       }
-    }
-  });
+
+      // store last offer/answer
+      if (parsed.type === "offer" || parsed.type === "answer") {
+        lastSignals[roomId] = parsed;
+      }
+
+      // Relay to other peers
+      for (const client of connections[roomId]) {
+        if (client !== ws && client.readyState === 1) {
+          client.send(JSON.stringify(parsed)); // ✅ always send as string
+        }
+      }
+    });
 
   ws.on("close", () => {
     connections[roomId] = connections[roomId].filter((c) => c !== ws);
