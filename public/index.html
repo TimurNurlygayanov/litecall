@@ -13,6 +13,8 @@
 
     html {
       scroll-behavior: smooth;
+      scroll-snap-type: y mandatory;
+      scroll-padding-top: 0;
     }
 
     body {
@@ -29,6 +31,8 @@
       align-items: center;
       justify-content: center;
       padding: 2rem;
+      scroll-snap-align: start;
+      scroll-snap-stop: always;
     }
 
     .page-1 {
@@ -36,8 +40,8 @@
     }
 
     .page-2 {
-      background: #f8f9fa;
-      color: #333;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
     }
 
     h1 {
@@ -74,28 +78,53 @@
     }
 
     .features {
-      max-width: 600px;
-      text-align: center;
+      max-width: 700px;
+      text-align: left;
+      padding: 3rem;
     }
 
     .features h2 {
-      font-size: 2rem;
-      margin-bottom: 2rem;
-      color: #333;
+      font-size: 2.5rem;
+      margin-bottom: 3rem;
+      color: #fff;
+      text-align: center;
+      font-weight: 300;
+      letter-spacing: -0.5px;
     }
 
-    .features ul {
+    .features-list {
       list-style: none;
-      font-size: 1.2rem;
-      line-height: 2;
+      font-size: 1.3rem;
+      line-height: 2.2;
     }
 
-    .features li {
-      margin: 1rem 0;
-      padding: 1rem;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    .features-list li {
+      margin: 1.5rem 0;
+      padding-left: 2.5rem;
+      position: relative;
+      color: rgba(255, 255, 255, 0.95);
+    }
+
+    .features-list li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #00bfa6;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+
+    .features-list li:last-child {
+      margin-top: 2.5rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .features-list li:last-child::before {
+      display: none;
     }
 
     .scroll-indicator {
@@ -118,10 +147,13 @@
         font-size: 2rem;
       }
       .features h2 {
-        font-size: 1.5rem;
+        font-size: 2rem;
       }
-      .features ul {
-        font-size: 1rem;
+      .features-list {
+        font-size: 1.1rem;
+      }
+      .features-list li:last-child {
+        font-size: 1.3rem;
       }
     }
   </style>
@@ -138,14 +170,14 @@
   <!-- Second Page -->
   <div class="page page-2">
     <div class="features">
-      <h2>About Our Service</h2>
-      <ul>
+      <h2>Why Choose Us</h2>
+      <ul class="features-list">
         <li>We provide free peer-to-peer 1:1 meetings</li>
         <li>We do not require any authentification</li>
         <li>We do not track location & user data</li>
         <li>We do not use cookies</li>
         <li>All calls are secure with SSL encription</li>
-        <li><strong>So it is private, secure and free</strong></li>
+        <li>So it is private, secure and free</li>
       </ul>
     </div>
   </div>
