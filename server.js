@@ -17,7 +17,9 @@ if (!fs.existsSync(callsFile)) {
   fs.writeFileSync(callsFile, JSON.stringify({ successful: 0 }));
 }
 
-let connections = {}; // roomId -> [clients]
+const connections = {}; // roomId -> [clients]
+const lastSignals = {}; // roomId -> last offer/answer
+
 
 // Отдаём статические файлы из public/
 app.use(express.static("public"));
@@ -47,65 +49,54 @@ const server = app.listen(PORT, () =>
 const wss = new WebSocketServer({ server });
 
 wss.on("connection", (ws, req) => {
-  // === Определяем комнату ===
   const parsedUrl = url.parse(req.url, true);
   const roomId = parsedUrl.query.room;
 
   if (!roomId) {
-    console.warn("⚠️ Client connected without room ID, closing...");
     ws.close();
     return;
   }
 
   if (!connections[roomId]) connections[roomId] = [];
   connections[roomId].push(ws);
+
   console.log(`👥 Client joined room "${roomId}" (${connections[roomId].length} total)`);
 
-  // === Увеличиваем счётчик успешных звонков ===
-  if (connections[roomId].length === 2) {
-    try {
-      const data = JSON.parse(fs.readFileSync(callsFile, "utf8"));
-      data.successful += 1;
-      fs.writeFileSync(callsFile, JSON.stringify(data));
-      console.log(`📈 Successful calls: ${data.successful}`);
-    } catch (e) {
-      console.error("❌ Failed to update call counter:", e);
-    }
+  // If this room already has stored signal — send it to the newcomer
+  if (lastSignals[roomId]) {
+    console.log(`📤 Sending stored signal to new peer in room ${roomId}`);
+    ws.send(JSON.stringify(lastSignals[roomId]));
   }
 
-  // === Пересылка сигналов ===
-  ws.on("message", (msg) => {
-    const text = typeof msg === "string" ? msg : msg.toString();
-
-    // Проверяем что это JSON
+  ws.on("message", (msg, isBinary) => {
+    const messageText = isBinary ? msg.toString() : msg;
     let parsed;
     try {
-      parsed = JSON.parse(text);
-    } catch {
-      console.warn("⚠️ Non-JSON WS message, skipping:", text.slice(0, 60));
+      parsed = JSON.parse(messageText);
+    } catch (err) {
+      console.error("❌ Invalid JSON:", err);
       return;
     }
 
-    // Проверяем тип сигнала
-    if (!parsed.type && !parsed.candidate) {
-      console.warn("⚠️ Unknown message structure:", parsed);
-      return;
+    // If it's an offer or answer, store it
+    if (parsed.type === "offer" || parsed.type === "answer") {
+      lastSignals[roomId] = parsed;
     }
 
-    console.log(`📡 signal relayed in room "${roomId}" → ${parsed.type || "candidate"}`);
-
-    // Отправляем всем, кроме отправителя
+    // Relay to other peers
     for (const client of connections[roomId]) {
       if (client !== ws && client.readyState === 1) {
-        client.send(JSON.stringify(parsed));
+        client.send(messageText);
       }
     }
   });
 
-  // === Очистка при отключении ===
   ws.on("close", () => {
     connections[roomId] = connections[roomId].filter((c) => c !== ws);
-    if (connections[roomId].length === 0) delete connections[roomId];
+    if (connections[roomId].length === 0) {
+      delete connections[roomId];
+      delete lastSignals[roomId];
+    }
     console.log(`❌ Client left room "${roomId}"`);
   });
 });
