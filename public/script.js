@@ -20,6 +20,8 @@ let queuedSignals = []; // outgoing signals
 let queuedIncomingSignals = []; // incoming signals waiting for peer
 let reconnectAttempts = 0;
 let reconnecting = false;
+let isRecreatingPeer = false; // prevent multiple simultaneous recreations
+let hasConnected = false; // track if we've ever successfully connected
 
 const proto = location.protocol === "https:" ? "wss" : "ws";
 const wsUrl = `${proto}://${location.host}/?room=${encodeURIComponent(room)}`;
@@ -108,7 +110,10 @@ function initPeer() {
     try {
       peer.destroy();
     } catch (_) {}
+    peer = null;
   }
+  isRecreatingPeer = false; // Reset flag when starting new peer
+  hasConnected = false; // Reset connection status for new peer
 
   // Get or reuse stream FIRST, then create peer connection
   if (!localStream) {
@@ -165,6 +170,7 @@ function createPeerConnection(stream) {
 
   peer.on("connect", () => {
     console.log("✅ Peer connected!");
+    hasConnected = true; // Mark that we've successfully connected
   });
 
   peer.on("stream", (stream) => {
@@ -174,21 +180,53 @@ function createPeerConnection(stream) {
 
   peer.on("error", (err) => {
     console.error("❌ Peer error:", err);
-    // при разрушении создаём новый Peer, если WS живой
-    if (err.message.includes("Abort") || err.message.includes("destroyed")) {
-      console.log("♻️ Recreating peer...");
-      setTimeout(() => initPeer(), 1500);
+    // Handle connection failures - recreate peer
+    if (err.message.includes("Abort") || 
+        err.message.includes("destroyed") || 
+        err.message.includes("Connection failed")) {
+      console.log("♻️ Recreating peer due to error...");
+      if (!isRecreatingPeer && ws && ws.readyState === WebSocket.OPEN) {
+        isRecreatingPeer = true;
+        setTimeout(() => {
+          isRecreatingPeer = false;
+          initPeer();
+        }, 500);
+      }
     }
   });
 
   peer.on("close", () => {
     console.warn("🔌 Peer closed");
-    // при закрытии тоже пересоздаём
-    setTimeout(() => initPeer(), 1500);
+    // Only recreate if we're still connected via WebSocket
+    if (!isRecreatingPeer && ws && ws.readyState === WebSocket.OPEN) {
+      isRecreatingPeer = true;
+      setTimeout(() => {
+        isRecreatingPeer = false;
+        initPeer();
+      }, 1000);
+    }
   });
 
-  peer.on("iceStateChange", (state) => console.log("🧊 ICE state:", state));
-  peer.on("iceConnectionStateChange", (state) => console.log("🧊 ICE conn:", state));
+  peer.on("iceStateChange", (state) => {
+    console.log("🧊 ICE state:", state);
+  });
+  
+  peer.on("iceConnectionStateChange", (state) => {
+    console.log("🧊 ICE conn:", state);
+    // Handle connection failures through ICE state changes
+    // Only recreate if we haven't successfully connected yet
+    // (to avoid recreating on temporary disconnects after successful connection)
+    if ((state === "failed" || (state === "disconnected" && !hasConnected)) && !isRecreatingPeer) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        console.log(`♻️ ICE connection ${state}, recreating peer...`);
+        isRecreatingPeer = true;
+        setTimeout(() => {
+          isRecreatingPeer = false;
+          initPeer();
+        }, 500); // Reduced delay for faster recovery
+      }
+    }
+  });
 
   // Add stream after all handlers are set up
   peer.addStream(stream);
