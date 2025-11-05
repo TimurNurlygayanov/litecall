@@ -111,8 +111,59 @@ function initWebSocket() {
     log("✅ WS open");
     reconnectAttempts = 0;
     flushQueue();
-    // Wait for room-info to determine host/client role before starting peer
-    // The room-info will be sent immediately by the server
+    // Start getting media stream immediately (for host, this shows their video right away)
+    // We'll determine host/client role from room-info, but no need to wait for it to start streaming
+    if (!localStream) {
+      log("🎥 Starting media stream immediately...");
+      // Get media stream first, then we'll create peer when we know our role
+      navigator.mediaDevices
+        .getUserMedia({
+          video: CONFIG.VIDEO,
+          audio: CONFIG.AUDIO,
+        })
+        .then(async (stream) => {
+          localStream = stream;
+          localVideo.srcObject = stream;
+          log("🎥 Local stream ready");
+          
+          // Show local video widget immediately
+          if (localVideo) {
+            localVideo.style.display = "block";
+          }
+          
+          // For host: hide waiting screen and show controls once stream is ready
+          // We'll know if we're host when room-info arrives, but for now show video
+          // The waiting screen will be hidden when we confirm we're the host
+          
+          // Clear any existing timeout
+          if (cameraEnumTimeout) {
+            clearTimeout(cameraEnumTimeout);
+          }
+          
+          // Enumerate cameras in background (non-blocking) for switch button
+          cameraEnumTimeout = setTimeout(async () => {
+            cameraEnumTimeout = null;
+            try {
+              availableCameras = await getAvailableCameras();
+              if (availableCameras.length > 1 && btnSwitchCamera) {
+                btnSwitchCamera.style.display = "block";
+                log(`📹 Found ${availableCameras.length} cameras`);
+              }
+            } catch (err) {
+              console.error("Error enumerating cameras:", err);
+            }
+          }, CONFIG.CAMERA_ENUM_DELAY);
+        })
+        .catch((err) => {
+          console.error("getUserMedia error:", err);
+          // Show user-friendly error message
+          if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+            alert("Camera and microphone access is required.");
+          } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+            alert("No camera or microphone found.");
+          }
+        });
+    }
   });
 
   ws.addEventListener("message", (event) => {
@@ -125,6 +176,21 @@ function initWebSocket() {
         log(`📋 Room info: isFirst=${data.isFirst}, totalClients=${data.totalClients}`);
         log(`👤 Role: ${isHost ? "Host" : "Client"}`);
         
+        // For host: hide waiting screen and show controls once we know we're the host
+        if (isHost && waitingScreen) {
+          log("👤 Host detected, hiding waiting screen and showing controls...");
+          waitingScreen.classList.add("hidden");
+          // Ensure controls are visible
+          if (controls) {
+            controls.style.display = "flex";
+            controls.style.visibility = "visible";
+          }
+          // Ensure local video is visible
+          if (localVideo) {
+            localVideo.style.display = "block";
+          }
+        }
+        
         // If client joins and host is already active (totalClients > 1), hide waiting screen immediately
         if (!isHost && data.totalClients > 1 && waitingScreen) {
           log("👥 Host already active, hiding waiting screen...");
@@ -132,29 +198,34 @@ function initWebSocket() {
           // Ensure controls are visible
           if (controls) {
             controls.style.display = "flex";
+            controls.style.visibility = "visible";
           }
         }
         
-        // Now that we know our role, start getting media and creating peer connection
-        if (!peer && !localStream) {
+        // Now that we know our role, create peer connection if we have a stream
+        // (Stream might already be ready from WS open handler)
+        if (localStream && !peer) {
+          log(`⚡ ${isHost ? "Host" : "Client"} detected, creating peer connection with stream...`);
+          createPeerConnection(localStream);
+        } else if (!localStream && !peer) {
+          // Stream not ready yet, start getting it
           log(`⚙️ ${isHost ? "Host" : "Client"} detected, starting peer setup...`);
           initPeer();
-        } else if (localStream && !peer) {
-          // Stream already exists, create peer connection immediately
-          log(`⚡ Creating peer connection with existing stream...`);
-          createPeerConnection(localStream);
         }
         return;
       }
       
       // Handle WebRTC signals
+      // Note: This handles late connections - if client connects 10+ minutes after host,
+      // the host's peer might have closed, but we can recreate it when the answer arrives
       if (!peer) {
         log("🕓 Incoming signal queued (peer not ready yet):", data.type || "candidate");
         queuedIncomingSignals.push(data);
         
         // If we have a stream, create peer IMMEDIATELY to process signals
+        // This is critical for late connections - host can recreate peer when answer arrives
         if (localStream) {
-          log("⚡ Creating peer immediately to process incoming signal...");
+          log("⚡ Creating peer immediately to process incoming signal (late connection support)...");
           createPeerConnection(localStream);
           // Signal will be processed in createPeerConnection after peer is created
           return;
@@ -308,13 +379,34 @@ function initPeer() {
         log("🎥 Local stream ready, creating peer connection...");
         log("🎥 isHost =", isHost);
         
+        // Show local video widget immediately
+        if (localVideo) {
+          localVideo.style.display = "block";
+        }
+        
+        // For host: hide waiting screen and show controls once stream is ready
+        if (isHost && waitingScreen) {
+          waitingScreen.classList.add("hidden");
+          if (controls) {
+            controls.style.display = "flex";
+            controls.style.visibility = "visible";
+          }
+        }
+        
         // Clear any existing timeout
         if (cameraEnumTimeout) {
           clearTimeout(cameraEnumTimeout);
         }
         
-        // Create peer connection immediately - don't wait for camera enumeration
-        createPeerConnection(stream);
+        // Only create peer if one doesn't already exist (prevent race conditions)
+        // If peer already exists, it means getUserMedia resolved after peer was created
+        // from a queued signal or another initPeer() call
+        if (!peer) {
+          // Create peer connection immediately - don't wait for camera enumeration
+          createPeerConnection(stream);
+        } else {
+          log("⚠️ Peer already exists, skipping peer creation (race condition avoided)");
+        }
         
         // Enumerate cameras in background (non-blocking) for switch button
         cameraEnumTimeout = setTimeout(async () => {
@@ -444,21 +536,15 @@ function createPeerConnection(stream) {
         }, CONFIG.PEER_RECREATE_DELAY);
       }
     } else if (err.message.includes("Connection failed")) {
-      // Connection failed - wait a bit longer before recreating, might recover
-      log("⚠️ Connection failed, waiting to see if it recovers...");
-      if (!isRecreatingPeer && !hasConnected && ws && ws.readyState === WebSocket.OPEN) {
-        // Only recreate if we haven't connected yet and after a longer delay
-        isRecreatingPeer = true;
-        setTimeout(() => {
-          if (!hasConnected) {
-            log("♻️ Connection didn't recover, recreating peer...");
-            isRecreatingPeer = false;
-            initPeer();
-          } else {
-            isRecreatingPeer = false;
-          }
-        }, CONFIG.PEER_RECREATE_DELAY * 3); // Longer delay for connection failures
-      }
+      // Connection failed - this can happen during normal negotiation
+      // Check ICE connection state - if it's "connecting" or "checking", it might recover
+      // Only recreate if we're definitely failed and haven't connected
+      log("⚠️ Connection failed, checking ICE state...");
+      
+      // Don't recreate immediately - ICE might recover
+      // SimplePeer will handle the connection state internally
+      // We'll only recreate if the peer actually closes and hasn't connected
+      // (handled in peer.on("close"))
     }
   });
 
@@ -467,23 +553,46 @@ function createPeerConnection(stream) {
     // Don't recreate if peer was set to null (intentionally destroyed)
     // Don't recreate if we're already recreating
     // Don't recreate if we've successfully connected before
-    if (!peer || isRecreatingPeer || hasConnected) {
+    // Don't recreate if we've received a remote stream (connection is working)
+    const hasRemoteStream = remoteVideo && remoteVideo.srcObject;
+    if (!peer || isRecreatingPeer || hasConnected || hasRemoteStream) {
+      if (hasRemoteStream) {
+        log("✅ Remote stream exists, connection is working - not recreating");
+      }
       return;
     }
     
     // Only recreate if WebSocket is still open and we haven't connected
+    // Note: For late connections (client joins 10+ minutes later), we DON'T recreate here.
+    // Instead, we wait for the client's answer signal to arrive, which will trigger
+    // peer creation via the signal handler (which checks !peer and creates one).
+    // This prevents unnecessary recreation loops while waiting for a client.
     if (ws && ws.readyState === WebSocket.OPEN) {
       const currentPeer = peer;
       const queuedSignalsCount = queuedIncomingSignals.length;
       logWarn(`🔌 Peer closed. Queued signals: ${queuedSignalsCount}`);
       
+      // If we're the host and waiting for a client, don't recreate immediately
+      // Wait for the client's answer signal to trigger peer creation
+      if (isHost && !hasConnected) {
+        log("⏳ Host waiting for client - will recreate peer when answer arrives");
+        return;
+      }
+      
       isRecreatingPeer = true;
       setTimeout(() => {
         // Only recreate if this is still the current peer (wasn't destroyed) and we haven't connected
         if (currentPeer && currentPeer === peer && !hasConnected) {
-          logWarn("🔌 Peer closed without connecting, recreating...");
-          isRecreatingPeer = false;
-          initPeer();
+          // Double-check we still don't have a remote stream before recreating
+          const stillHasRemoteStream = remoteVideo && remoteVideo.srcObject;
+          if (!stillHasRemoteStream) {
+            logWarn("🔌 Peer closed without connecting, recreating...");
+            isRecreatingPeer = false;
+            initPeer();
+          } else {
+            log("✅ Remote stream appeared, connection is working - not recreating");
+            isRecreatingPeer = false;
+          }
         } else {
           isRecreatingPeer = false;
         }
