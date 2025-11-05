@@ -737,40 +737,10 @@ function createPeerConnection(stream) {
     remoteVideo.srcObject = stream;
     
     // On mobile, videos need to be muted initially to autoplay (browser autoplay policy)
-    // We'll unmute after it starts playing
+    // Start muted to ensure autoplay works
     remoteVideo.muted = true;
     
-    // Try to play immediately
-    remoteVideo.play().then(() => {
-      log("✅ Remote video started playing");
-      // Once playing, try to unmute (may fail on mobile due to autoplay policy, but worth trying)
-      remoteVideo.muted = false;
-      // Try to play again after unmuting (some browsers need this)
-      remoteVideo.play().catch(() => {
-        // Silent fail - video is playing, just muted due to autoplay policy
-        logWarn("⚠️ Remote video is muted due to browser autoplay policy");
-      });
-    }).catch(err => {
-      console.error("Error playing remote video:", err);
-      // On mobile, try muted first if unmuted failed
-      if (!remoteVideo.muted) {
-        log("🔄 Retrying with muted video...");
-        remoteVideo.muted = true;
-        remoteVideo.play().then(() => {
-          log("✅ Remote video playing (muted)");
-        }).catch(err2 => {
-          console.error("Error playing remote video (muted):", err2);
-        });
-      }
-    });
-    
-    // Cleanup previous handler if exists
-    if (videoPlayingHandler) {
-      remoteVideo.removeEventListener("playing", videoPlayingHandler);
-      remoteVideo.removeEventListener("loadedmetadata", videoPlayingHandler);
-    }
-    
-    // Show video immediately - no delay
+    // Show video element immediately
     remoteVideo.classList.add("playing");
     
     // Hide waiting screen when remote stream is received (client has joined)
@@ -779,31 +749,68 @@ function createPeerConnection(stream) {
       waitingScreen.classList.add("hidden");
     }
     
+    // Cleanup previous handler if exists
+    if (videoPlayingHandler) {
+      remoteVideo.removeEventListener("playing", videoPlayingHandler);
+      remoteVideo.removeEventListener("loadedmetadata", videoPlayingHandler);
+      remoteVideo.removeEventListener("canplay", videoPlayingHandler);
+    }
+    
+    // Try to play immediately (muted for autoplay)
+    const playPromise = remoteVideo.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          log("✅ Remote video started playing (muted)");
+          // Try to unmute after a short delay - this might work on some browsers
+          setTimeout(() => {
+            if (remoteVideo.muted) {
+              remoteVideo.muted = false;
+              remoteVideo.play().catch(() => {
+                // Silent fail - video is playing muted, user may need to interact
+                logWarn("⚠️ Remote video remains muted due to autoplay policy");
+              });
+            }
+          }, 500);
+        })
+        .catch(err => {
+          console.error("Error playing remote video:", err);
+          // Video element is already set to muted, so it should play
+          // If it still fails, the issue is likely something else
+        });
+    }
+    
     // Listen for when video actually starts playing to ensure smooth transition
     videoPlayingHandler = () => {
-      // Video is confirmed playing - try to unmute if still muted
-      if (remoteVideo.muted) {
-        remoteVideo.muted = false;
-        remoteVideo.play().catch(() => {
-          // Silent fail - video is playing, user may need to interact to unmute
-        });
-      }
+      log("✅ Remote video confirmed playing");
       // Ensure it's visible
       remoteVideo.classList.add("playing");
+      
+      // Try to unmute once video is confirmed playing
+      // This might work better than unmuting immediately
+      setTimeout(() => {
+        if (remoteVideo.muted && remoteVideo.readyState >= 3) {
+          remoteVideo.muted = false;
+          remoteVideo.play().catch(() => {
+            // Silent fail - autoplay policy might prevent unmuting
+          });
+        }
+      }, 100);
       
       // Cleanup handler
       if (videoPlayingHandler) {
         remoteVideo.removeEventListener("playing", videoPlayingHandler);
         remoteVideo.removeEventListener("loadedmetadata", videoPlayingHandler);
+        remoteVideo.removeEventListener("canplay", videoPlayingHandler);
         videoPlayingHandler = null;
       }
     };
     
     // Add listeners for confirmation (non-blocking)
-    if (remoteVideo.readyState < 3) {
-      remoteVideo.addEventListener("playing", videoPlayingHandler, { once: true });
-      remoteVideo.addEventListener("loadedmetadata", videoPlayingHandler, { once: true });
-    }
+    // Use multiple events to catch when video is ready
+    remoteVideo.addEventListener("playing", videoPlayingHandler, { once: true });
+    remoteVideo.addEventListener("loadedmetadata", videoPlayingHandler, { once: true });
+    remoteVideo.addEventListener("canplay", videoPlayingHandler, { once: true });
   });
 
   peer.on("error", (err) => {
@@ -1049,6 +1056,14 @@ async function getAvailableCameras() {
 async function switchToCamera(deviceId) {
   if (!localStream || !deviceId) return;
   
+  // Check if this is already the current camera
+  const currentTrack = localStream.getVideoTracks()[0];
+  const currentSettings = currentTrack?.getSettings();
+  if (currentSettings?.deviceId === deviceId) {
+    log("ℹ️ Camera is already selected, no need to switch");
+    return;
+  }
+  
   try {
     log(`📹 Switching to camera: ${deviceId}`);
     
@@ -1101,7 +1116,17 @@ async function switchToCamera(deviceId) {
       return;
     }
     
-    // IMPORTANT: Replace track in peer connection FIRST, before removing old track
+    // Get existing audio track from current stream
+    const audioTrack = localStream.getAudioTracks()[0];
+    
+    // Create a new MediaStream with the new video track and existing audio track
+    const updatedStream = new MediaStream();
+    updatedStream.addTrack(newVideoTrack);
+    if (audioTrack) {
+      updatedStream.addTrack(audioTrack);
+    }
+    
+    // IMPORTANT: Replace track in peer connection FIRST, before updating local stream
     // This ensures continuity and prevents black screen
     if (peer && peer._pc) {
       const sender = peer._pc.getSenders().find(s => 
@@ -1109,25 +1134,22 @@ async function switchToCamera(deviceId) {
       );
       if (sender) {
         await sender.replaceTrack(newVideoTrack);
+        log("✅ Video track replaced in peer connection");
       } else {
         logWarn("No video sender found in peer connection");
       }
     }
     
-    // Now replace track in local stream
+    // Stop old video track
     const oldVideoTrack = localStream.getVideoTracks()[0];
-    
-    // Add new track before removing old one to prevent black screen
-    localStream.addTrack(newVideoTrack);
-    
-    // Update video element immediately with new track
-    localVideo.srcObject = localStream;
-    
-    // Now remove old track and stop it
     if (oldVideoTrack) {
-      localStream.removeTrack(oldVideoTrack);
       oldVideoTrack.stop();
     }
+    
+    // Replace the entire stream in the video element
+    // This is more reliable than trying to modify the existing stream
+    localStream = updatedStream;
+    localVideo.srcObject = updatedStream;
     
     // Stop the temporary stream tracks (we only needed the video track)
     newStream.getTracks().forEach(track => {
@@ -1135,6 +1157,8 @@ async function switchToCamera(deviceId) {
         track.stop();
       }
     });
+    
+    log("✅ Local stream updated with new camera");
     
     // Update current camera index
     const cameraIndex = availableCameras.findIndex(cam => cam.deviceId === deviceId);
