@@ -207,9 +207,11 @@ function initWebSocket() {
       
       // Handle room-info message from server
       if (data.type === "room-info") {
+        const wasHost = isHost;
         isHost = data.isFirst;
-        log(`📋 Room info: isFirst=${data.isFirst}, totalClients=${data.totalClients}`);
-        log(`👤 Role: ${isHost ? "Host" : "Client"}`);
+        const newClientJoined = data.newClientJoined || false;
+        log(`📋 Room info: isFirst=${data.isFirst}, totalClients=${data.totalClients}, newClientJoined=${newClientJoined}`);
+        log(`👤 Role: ${isHost ? "Host" : "Client"} (was ${wasHost ? "Host" : "Client"})`);
         
         // For host: show controls and local video, but KEEP waiting screen visible
         // until a client actually joins (so host can share the link)
@@ -250,6 +252,19 @@ function initWebSocket() {
           waitingScreen.classList.add("hidden");
         }
         
+        // IMPORTANT: If host detects a new client joined and we don't have a peer, recreate it
+        // This handles reconnection scenarios where host's peer was closed
+        if (isHost && newClientJoined && !peer && localStream) {
+          log("🔄 Host detected new client joined but no peer exists - recreating peer connection...");
+          const hasRemoteStream = remoteVideo && remoteVideo.srcObject;
+          if (hasRemoteStream) {
+            log("🔄 Clearing stale remote stream before recreating peer...");
+            clearStaleRemoteStream();
+          }
+          createPeerConnection(localStream);
+          return; // Don't continue with normal peer creation below
+        }
+        
         // Now that we know our role, create peer connection if we have a stream
         // (Stream might already be ready from WS open handler)
         if (localStream && !peer) {
@@ -259,6 +274,8 @@ function initWebSocket() {
           // Stream not ready yet, start getting it
           log(`⚙️ ${isHost ? "Host" : "Client"} detected, starting peer setup...`);
           initPeer();
+        } else if (peer) {
+          log(`ℹ️ Peer already exists (${isHost ? "Host" : "Client"}), skipping creation`);
         }
         return;
       }
@@ -267,20 +284,26 @@ function initWebSocket() {
       // Note: This handles late connections - if client connects 10+ minutes after host,
       // the host's peer might have closed, but we can recreate it when signals arrive
       if (!peer) {
+        log(`🕓 No peer exists. Signal type: ${data.type || 'candidate'}, isHost: ${isHost}, hasLocalStream: ${!!localStream}`);
+        
         // Clear any stale remote stream from previous connection
-        clearStaleRemoteStream();
+        const hadStaleStream = clearStaleRemoteStream();
+        if (hadStaleStream) {
+          log("🔄 Cleared stale remote stream from previous connection");
+        }
         
         // For host (initiator) receiving answer when peer doesn't exist: this is likely a stale answer
         // from a previous connection. Ignore it and create peer to generate new offer.
         // For client (non-initiator): accept offers - we need them to connect
         if (data.type === "answer" && isHost) {
-          log("⚠️ Ignoring stale answer from previous connection (host will generate new offer)");
+          log("⚠️ Host received answer but no peer exists - ignoring stale answer, will generate new offer");
           recreatePeerConnection();
           return;
         }
         
-        log("🕓 Incoming signal queued (peer not ready yet):", data.type || "candidate");
+        log(`🕓 Incoming signal queued (peer not ready yet): ${data.type || "candidate"}`);
         queuedIncomingSignals.push(data);
+        log(`📋 Total queued signals: ${queuedIncomingSignals.length}`);
         
         // If we have a stream, create peer IMMEDIATELY to process signals
         // This is critical for late connections - host can recreate peer when signals arrive
@@ -318,15 +341,19 @@ function initWebSocket() {
       }
       
       try {
-        log("📥 Processing signal:", data.type || "candidate");
+        log(`📥 Processing signal: ${data.type || "candidate"} (peer exists: ${!!peer}, hasConnected: ${hasConnected})`);
         peer.signal(data);
+        log(`✅ Successfully processed signal: ${data.type || "candidate"}`);
       } catch (err) {
+        console.error(`❌ Error processing signal ${data.type || "candidate"}:`, err);
         // If peer was destroyed, we need to handle reconnection
         if (err.message && err.message.includes("destroyed")) {
           console.error("❌ Peer was destroyed, handling reconnection...");
+          log(`🔄 Peer destroyed. Signal type: ${data.type}, isHost: ${isHost}`);
           
           // Clear stale remote stream if it exists
           const hadStaleStream = clearStaleRemoteStream();
+          log(`🔄 Stale stream cleared: ${hadStaleStream}`);
           
           // For host receiving answer: ignore it, will generate new offer
           // For client or other signals: queue them if no stale stream was cleared
@@ -335,12 +362,14 @@ function initWebSocket() {
             recreatePeerConnection();
           } else if (!hadStaleStream) {
             // Only queue if we didn't have a stale stream (fresh connection attempt)
+            log(`📋 Queueing signal for processing after peer recreation: ${data.type || "candidate"}`);
             if (!queuedIncomingSignals.includes(data)) {
               queuedIncomingSignals.push(data);
             }
             recreatePeerConnection();
           } else {
             // Had stale stream - recreate without queueing (stale signals already cleared)
+            log("🔄 Recreating peer without queueing (stale signals already cleared)");
             recreatePeerConnection();
           }
         } else {
@@ -769,20 +798,24 @@ function createPeerConnection(stream) {
   // Once peer exists, we process all signals normally (including answers for host during normal flow)
   if (queuedIncomingSignals.length > 0) {
     log(`⚡ Processing ${queuedIncomingSignals.length} queued signals immediately...`);
+    log(`📋 Queued signals: ${queuedIncomingSignals.map(s => s.type || 'candidate').join(', ')}`);
     // Process signals synchronously, in order - no delays
     const signalsToProcess = [...queuedIncomingSignals];
     queuedIncomingSignals = [];
+    let processedCount = 0;
     signalsToProcess.forEach((signal) => {
       try {
-        log(`📥 Processing queued signal: ${signal.type || 'candidate'}`);
+        log(`📥 Processing queued signal ${processedCount + 1}/${signalsToProcess.length}: ${signal.type || 'candidate'}`);
         peer.signal(signal);
+        processedCount++;
+        log(`✅ Successfully processed queued signal: ${signal.type || 'candidate'}`);
       } catch (err) {
-        console.error("Error processing queued signal:", err);
+        console.error(`❌ Error processing queued signal ${signal.type || 'candidate'}:`, err);
       }
     });
-    log(`✅ Finished processing ${signalsToProcess.length} queued signals`);
+    log(`✅ Finished processing ${processedCount}/${signalsToProcess.length} queued signals`);
   } else {
-    log(`📋 No queued signals to process (${queuedIncomingSignals.length} queued)`);
+    log(`📋 No queued signals to process`);
   }
 }
 

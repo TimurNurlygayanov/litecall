@@ -130,17 +130,42 @@ wss.on("connection", (ws, req) => {
     console.log(`📈 Call count incremented: ${callCount}`);
   }
 
-  // Send room info to the new client
-  ws.send(JSON.stringify({
+  // Send room info to ALL clients in the room (notify them of the new connection)
+  const roomClients = connections[roomId];
+  const roomInfo = {
     type: "room-info",
     roomId: roomId,
     isFirst: isFirst,
-    totalClients: connections[roomId].length
-  }));
+    totalClients: roomClients.length
+  };
+  
+  // Send to the new client
+  ws.send(JSON.stringify(roomInfo));
+  
+  // Also notify existing clients that a new client joined (for reconnection handling)
+  if (roomClients.length > 1) {
+    console.log(`📢 Notifying ${roomClients.length - 1} existing clients about new connection`);
+    roomClients.forEach(client => {
+      if (client !== ws && client.readyState === 1) {
+        try {
+          // Send updated room info to existing clients
+          client.send(JSON.stringify({
+            type: "room-info",
+            roomId: roomId,
+            isFirst: false, // Existing clients are not first
+            totalClients: roomClients.length,
+            newClientJoined: true // Flag to indicate a new client just joined
+          }));
+        } catch (err) {
+          console.error("❌ Error notifying existing client:", err);
+        }
+      }
+    });
+  }
 
   // If this room already has stored signal — send it to the newcomer
   if (lastSignals[roomId]) {
-    console.log(`📤 Sending stored signal to new peer in room ${roomId}`);
+    console.log(`📤 Sending stored signal (${lastSignals[roomId].type}) to new peer in room ${roomId}`);
     ws.send(JSON.stringify(lastSignals[roomId]));
   }
 
