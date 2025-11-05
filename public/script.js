@@ -5,6 +5,9 @@ const DEBUG = true; // Set to true to enable verbose logging
 const log = (...args) => DEBUG && console.log(...args);
 const logWarn = (...args) => DEBUG && console.warn(...args);
 
+// Immediate test to verify script is loading
+console.log("🔵 Script.js loaded");
+
 // ====== Configuration ======
 const CONFIG = {
   // Media constraints
@@ -40,7 +43,10 @@ const ROOM_ID_PATTERN = /^[a-z0-9]{1,20}$/i; // Allow alphanumeric, max 20 chars
 const params = new URLSearchParams(location.search);
 const room = params.get("id");
 
+console.log("🔵 Room ID:", room);
+
 if (!room || !ROOM_ID_PATTERN.test(room)) {
+  console.error("❌ Invalid room ID:", room);
   location.replace("/");
   throw new Error("Invalid room id");
 }
@@ -769,3 +775,7 @@ if (btnLeave) {
     }, 500);
   });
 }
+
+// ====== Start ======
+console.log("🔵 Starting WebSocket connection...");
+initWebSocket();
