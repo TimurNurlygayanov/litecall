@@ -12,11 +12,49 @@
       object-fit: cover;
     }
     #local { width: 30vw; height: 30vh; bottom: 10px; right: 10px; border: 2px solid white; }
+
+    /* Панель кнопок */
+#controls {
+  position: absolute;
+  bottom: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 24px;
+  z-index: 10;
+}
+
+/* Кнопки */
+#controls button {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+#controls button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
   </style>
 </head>
 <body>
   <video id="remote" autoplay playsinline></video>
   <video id="local" autoplay playsinline muted></video>
+
+  <!-- Панель управления -->
+  <div id="controls">
+    <button id="btn-mute" title="Mute / Unmute">🎤</button>
+    <button id="btn-camera" title="Toggle Camera">🎥</button>
+    <button id="btn-leave" title="Disconnect">❌</button>
+  </div>
+
   <script src="https://unpkg.com/simple-peer/simplepeer.min.js"></script>
   <script src="script.js"></script>
 </body>
