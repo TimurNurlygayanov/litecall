@@ -103,6 +103,22 @@ function flushQueue() {
   }
 }
 
+// Helper function to check if peer is valid (not destroyed)
+function isPeerValid(p) {
+  if (!p) return false;
+  // SimplePeer destroyed peers have a destroyed property
+  if (p.destroyed === true) return false;
+  // Try-catch check for destroyed state
+  try {
+    // If we can access the peer without errors, it's likely valid
+    // But we can't easily check without trying to use it
+    // So we'll rely on the destroyed property and our own tracking
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 // Helper function to clear stale remote stream and reset UI
 function clearStaleRemoteStream() {
   const hasRemoteStream = remoteVideo && remoteVideo.srcObject;
@@ -273,30 +289,46 @@ function initWebSocket() {
           waitingScreen.classList.add("hidden");
         }
         
-        // IMPORTANT: If host detects a new client joined and we don't have a peer, recreate it
-        // This handles reconnection scenarios where host's peer was closed
-        if (isHost && newClientJoined && !peer && localStream) {
-          log("🔄 Host detected new client joined but no peer exists - recreating peer connection...");
-          const hasRemoteStream = remoteVideo && remoteVideo.srcObject;
-          if (hasRemoteStream) {
-            log("🔄 Clearing stale remote stream before recreating peer...");
-            clearStaleRemoteStream();
+        // IMPORTANT: If host detects a new client joined and we don't have a valid peer, recreate it
+        // This handles reconnection scenarios where host's peer was closed/destroyed
+        if (isHost && newClientJoined && localStream) {
+          const peerIsValid = isPeerValid(peer);
+          if (!peerIsValid) {
+            log("🔄 Host detected new client joined but peer is invalid/destroyed - recreating peer connection...");
+            const hasRemoteStream = remoteVideo && remoteVideo.srcObject;
+            if (hasRemoteStream) {
+              log("🔄 Clearing stale remote stream before recreating peer...");
+              clearStaleRemoteStream();
+            }
+            // Clear queued signals from previous connection
+            queuedIncomingSignals = [];
+            // Set peer to null to ensure clean recreation
+            peer = null;
+            createPeerConnection(localStream);
+            return; // Don't continue with normal peer creation below
+          } else {
+            log("✅ Host peer is valid, client will reconnect to existing peer");
           }
-          createPeerConnection(localStream);
-          return; // Don't continue with normal peer creation below
         }
         
         // Now that we know our role, create peer connection if we have a stream
         // (Stream might already be ready from WS open handler)
-        if (localStream && !peer) {
+        const peerIsValid = isPeerValid(peer);
+        if (localStream && !peerIsValid) {
           log(`⚡ ${isHost ? "Host" : "Client"} detected, creating peer connection with stream...`);
+          if (peer && peer.destroyed) {
+            peer = null; // Clean up destroyed peer reference
+          }
           createPeerConnection(localStream);
-        } else if (!localStream && !peer) {
+        } else if (!localStream && !peerIsValid) {
           // Stream not ready yet, start getting it
           log(`⚙️ ${isHost ? "Host" : "Client"} detected, starting peer setup...`);
+          if (peer && peer.destroyed) {
+            peer = null; // Clean up destroyed peer reference
+          }
           initPeer();
-        } else if (peer) {
-          log(`ℹ️ Peer already exists (${isHost ? "Host" : "Client"}), skipping creation`);
+        } else if (peerIsValid) {
+          log(`ℹ️ Valid peer already exists (${isHost ? "Host" : "Client"}), skipping creation`);
         }
         return;
       }
@@ -304,8 +336,15 @@ function initWebSocket() {
       // Handle WebRTC signals
       // Note: This handles late connections - if client connects 10+ minutes after host,
       // the host's peer might have closed, but we can recreate it when signals arrive
-      if (!peer) {
-        log(`🕓 No peer exists. Signal type: ${data.type || 'candidate'}, isHost: ${isHost}, hasLocalStream: ${!!localStream}`);
+      const peerIsValid = isPeerValid(peer);
+      if (!peerIsValid) {
+        log(`🕓 No valid peer exists. Signal type: ${data.type || 'candidate'}, isHost: ${isHost}, hasLocalStream: ${!!localStream}`);
+        
+        // Clear peer reference if it's destroyed
+        if (peer && peer.destroyed) {
+          log("🧹 Cleaning up destroyed peer reference");
+          peer = null;
+        }
         
         // Clear any stale remote stream from previous connection
         const hadStaleStream = clearStaleRemoteStream();
@@ -317,7 +356,7 @@ function initWebSocket() {
         // from a previous connection. Ignore it and create peer to generate new offer.
         // For client (non-initiator): accept offers - we need them to connect
         if (data.type === "answer" && isHost) {
-          log("⚠️ Host received answer but no peer exists - ignoring stale answer, will generate new offer");
+          log("⚠️ Host received answer but no valid peer exists - ignoring stale answer, will generate new offer");
           recreatePeerConnection();
           return;
         }
@@ -361,6 +400,27 @@ function initWebSocket() {
         // - Clearing here would break normal connection flow
       }
       
+      // Check if peer is still valid before processing signal
+      if (!isPeerValid(peer)) {
+        log(`⚠️ Peer is invalid/destroyed, cannot process signal: ${data.type || "candidate"}`);
+        // Clean up destroyed peer reference
+        if (peer && peer.destroyed) {
+          peer = null;
+        }
+        // Queue signal for processing after peer recreation
+        log(`📋 Queueing signal for processing after peer recreation: ${data.type || "candidate"}`);
+        if (!queuedIncomingSignals.includes(data)) {
+          queuedIncomingSignals.push(data);
+        }
+        // Recreate peer if we have a stream
+        if (localStream) {
+          recreatePeerConnection();
+        } else if (!localStream) {
+          initPeer();
+        }
+        return;
+      }
+      
       try {
         log(`📥 Processing signal: ${data.type || "candidate"} (peer exists: ${!!peer}, hasConnected: ${hasConnected})`);
         peer.signal(data);
@@ -372,6 +432,11 @@ function initWebSocket() {
           console.error("❌ Peer was destroyed, handling reconnection...");
           log(`🔄 Peer destroyed. Signal type: ${data.type}, isHost: ${isHost}`);
           
+          // Mark peer as destroyed
+          if (peer) {
+            peer.destroyed = true;
+          }
+          
           // Clear stale remote stream if it exists
           const hadStaleStream = clearStaleRemoteStream();
           log(`🔄 Stale stream cleared: ${hadStaleStream}`);
@@ -380,6 +445,7 @@ function initWebSocket() {
           // For client or other signals: queue them if no stale stream was cleared
           if (data.type === "answer" && isHost) {
             log("⚠️ Ignoring stale answer from previous connection (host will generate new offer)");
+            peer = null; // Clean up
             recreatePeerConnection();
           } else if (!hadStaleStream) {
             // Only queue if we didn't have a stale stream (fresh connection attempt)
@@ -387,10 +453,12 @@ function initWebSocket() {
             if (!queuedIncomingSignals.includes(data)) {
               queuedIncomingSignals.push(data);
             }
+            peer = null; // Clean up
             recreatePeerConnection();
           } else {
             // Had stale stream - recreate without queueing (stale signals already cleared)
             log("🔄 Recreating peer without queueing (stale signals already cleared)");
+            peer = null; // Clean up
             recreatePeerConnection();
           }
         } else {
@@ -594,6 +662,8 @@ function createPeerConnection(stream) {
       const oldPeer = peer;
       peer = null; // Set to null first to prevent close handler from recreating
       oldPeer.destroy();
+      // Mark as destroyed for cleanup
+      oldPeer.destroyed = true;
     } catch (_) {}
   }
   
@@ -701,6 +771,11 @@ function createPeerConnection(stream) {
 
   peer.on("close", () => {
     logWarn("🔌 Peer closed");
+    // Mark peer as destroyed so we know it's invalid
+    if (peer) {
+      peer.destroyed = true;
+    }
+    
     // Don't recreate if peer was set to null (intentionally destroyed)
     // Don't recreate if we're already recreating
     // Don't recreate if we've successfully connected before

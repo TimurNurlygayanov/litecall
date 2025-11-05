@@ -64,10 +64,11 @@
     }
 
     .page-1 {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: var(--page1-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
       color: #fff;
       position: relative;
       overflow: hidden;
+      transition: background 8s ease-in-out;
     }
     
     .page-1::before {
@@ -370,6 +371,51 @@
 
     // Update counter once on page load (no need to keep updating)
     updateCounter();
+
+    // Animated gradient for page-1
+    function updateGradient() {
+      const page1 = document.querySelector('.page-1');
+      if (!page1) return;
+
+      // Base colors
+      const baseColor1 = { r: 102, g: 126, b: 234 }; // #667eea
+      const baseColor2 = { r: 118, g: 75, b: 162 };  // #764ba2
+
+      // Generate slight variations (±15 for subtle changes)
+      const variation1 = {
+        r: Math.max(0, Math.min(255, baseColor1.r + Math.floor(Math.random() * 30 - 15))),
+        g: Math.max(0, Math.min(255, baseColor1.g + Math.floor(Math.random() * 30 - 15))),
+        b: Math.max(0, Math.min(255, baseColor1.b + Math.floor(Math.random() * 30 - 15)))
+      };
+      const variation2 = {
+        r: Math.max(0, Math.min(255, baseColor2.r + Math.floor(Math.random() * 30 - 15))),
+        g: Math.max(0, Math.min(255, baseColor2.g + Math.floor(Math.random() * 30 - 15))),
+        b: Math.max(0, Math.min(255, baseColor2.b + Math.floor(Math.random() * 30 - 15)))
+      };
+
+      // Vary angle slightly (±10 degrees from 135deg)
+      const angle = 135 + (Math.random() * 20 - 10);
+
+      // Vary color stop positions slightly
+      const stop1 = Math.max(0, Math.min(50, Math.random() * 20));
+      const stop2 = Math.max(50, Math.min(100, 50 + Math.random() * 30));
+
+      // Convert to hex
+      const toHex = (c) => {
+        const hex = c.toString(16).padStart(2, '0');
+        return hex;
+      };
+      const color1 = `#${toHex(variation1.r)}${toHex(variation1.g)}${toHex(variation1.b)}`;
+      const color2 = `#${toHex(variation2.r)}${toHex(variation2.g)}${toHex(variation2.b)}`;
+
+      // Create gradient
+      const gradient = `linear-gradient(${angle}deg, ${color1} ${stop1}%, ${color2} ${stop2}%)`;
+      page1.style.setProperty('--page1-gradient', gradient);
+    }
+
+    // Update gradient on load and every 6 seconds
+    updateGradient();
+    setInterval(updateGradient, 6000);
 
     // Hide scroll indicator when user scrolls
     let scrollIndicator = document.querySelector('.scroll-indicator');
