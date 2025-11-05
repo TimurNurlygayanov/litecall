@@ -170,10 +170,13 @@ wss.on("connection", (ws, req) => {
         return;
       }
 
-      // store last offer/answer
-      if (parsed.type === "offer" || parsed.type === "answer") {
+      // Only store offers (not answers) - answers are only for relaying
+      // When a client reconnects, they need the offer from the host, not their previous answer
+      if (parsed.type === "offer") {
         lastSignals[roomId] = parsed;
+        console.log(`💾 Stored offer for room ${roomId}`);
       }
+      // Answers are relayed but not stored - they're only valid for the current connection
 
       // Relay to other peers
       const roomClients = connections[roomId];

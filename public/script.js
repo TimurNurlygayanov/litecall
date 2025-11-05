@@ -176,10 +176,12 @@ function initWebSocket() {
         log(`📋 Room info: isFirst=${data.isFirst}, totalClients=${data.totalClients}`);
         log(`👤 Role: ${isHost ? "Host" : "Client"}`);
         
-        // For host: hide waiting screen and show controls once we know we're the host
+        // For host: show controls and local video, but KEEP waiting screen visible
+        // until a client actually joins (so host can share the link)
         if (isHost && waitingScreen) {
-          log("👤 Host detected, hiding waiting screen and showing controls...");
-          waitingScreen.classList.add("hidden");
+          log("👤 Host detected, showing controls but keeping link widget visible...");
+          // Don't hide waiting screen yet - keep it visible so host can share the link
+          // It will be hidden when remote stream is received or when client joins
           // Ensure controls are visible
           if (controls) {
             controls.style.display = "flex";
@@ -200,6 +202,12 @@ function initWebSocket() {
             controls.style.display = "flex";
             controls.style.visibility = "visible";
           }
+        }
+        
+        // For host: if totalClients > 1, a client has joined - hide waiting screen
+        if (isHost && data.totalClients > 1 && waitingScreen) {
+          log("👥 Client has joined (totalClients > 1) - hiding waiting screen with link widget");
+          waitingScreen.classList.add("hidden");
         }
         
         // Now that we know our role, create peer connection if we have a stream
@@ -497,8 +505,9 @@ function createPeerConnection(stream) {
     // Show video immediately - no delay
     remoteVideo.classList.add("playing");
     
-    // Hide waiting screen immediately when stream is received
+    // Hide waiting screen when remote stream is received (client has joined)
     if (waitingScreen && !waitingScreen.classList.contains("hidden")) {
+      log("👥 Client joined - hiding waiting screen with link widget");
       waitingScreen.classList.add("hidden");
     }
     
