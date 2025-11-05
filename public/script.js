@@ -103,6 +103,33 @@ function flushQueue() {
   }
 }
 
+// Helper function to clear stale remote stream and reset UI
+function clearStaleRemoteStream() {
+  const hasRemoteStream = remoteVideo && remoteVideo.srcObject;
+  if (hasRemoteStream) {
+    log("🔄 Clearing stale remote stream from previous connection...");
+    remoteVideo.srcObject = null;
+    remoteVideo.classList.remove("playing");
+    queuedIncomingSignals = []; // Clear queued signals - they're from previous connection
+    // Show waiting screen again for host
+    if (waitingScreen && isHost) {
+      waitingScreen.classList.remove("hidden");
+      waitingScreen.classList.add("host-streaming");
+    }
+    return true; // Return true if stream was cleared
+  }
+  return false; // Return false if no stream to clear
+}
+
+// Helper function to recreate peer connection
+function recreatePeerConnection() {
+  if (localStream) {
+    createPeerConnection(localStream);
+  } else {
+    initPeer();
+  }
+}
+
 // ====== WebSocket setup ======
 function initWebSocket() {
   ws = new WebSocket(wsUrl);
@@ -151,10 +178,11 @@ function initWebSocket() {
           cameraEnumTimeout = setTimeout(async () => {
             cameraEnumTimeout = null;
             try {
-              availableCameras = await getAvailableCameras();
-              if (availableCameras.length > 1 && btnSwitchCamera) {
+              const cameras = await getAvailableCameras();
+              availableCameras = cameras; // Update global variable
+              if (cameras.length > 1 && btnSwitchCamera) {
                 btnSwitchCamera.style.display = "block";
-                log(`📹 Found ${availableCameras.length} cameras`);
+                log(`📹 Found ${cameras.length} cameras`);
               }
             } catch (err) {
               console.error("Error enumerating cameras:", err);
@@ -239,33 +267,15 @@ function initWebSocket() {
       // Note: This handles late connections - if client connects 10+ minutes after host,
       // the host's peer might have closed, but we can recreate it when signals arrive
       if (!peer) {
-        // Check if we have a stale remote stream (from previous connection that closed)
-        const hasRemoteStream = remoteVideo && remoteVideo.srcObject;
-        if (hasRemoteStream) {
-          log("🔄 Clearing stale remote stream from previous connection...");
-          remoteVideo.srcObject = null;
-          remoteVideo.classList.remove("playing");
-          // Clear queued signals - they're from the previous connection
-          queuedIncomingSignals = [];
-          // Show waiting screen again for host
-          if (waitingScreen && isHost) {
-            waitingScreen.classList.remove("hidden");
-            waitingScreen.classList.add("host-streaming");
-          }
-        }
+        // Clear any stale remote stream from previous connection
+        clearStaleRemoteStream();
         
         // For host (initiator) receiving answer when peer doesn't exist: this is likely a stale answer
         // from a previous connection. Ignore it and create peer to generate new offer.
         // For client (non-initiator): accept offers - we need them to connect
         if (data.type === "answer" && isHost) {
           log("⚠️ Ignoring stale answer from previous connection (host will generate new offer)");
-          // Still create peer if we don't have one, but don't queue the stale answer
-          if (localStream) {
-            log("⚡ Creating peer to generate new offer...");
-            createPeerConnection(localStream);
-          } else {
-            initPeer();
-          }
+          recreatePeerConnection();
           return;
         }
         
@@ -291,13 +301,20 @@ function initWebSocket() {
       
       // Peer exists - process signal immediately
       // This is the normal connection flow - host should process answers normally
-      // But check if we already have a remote stream - if so, ignore additional answers (stale signals)
+      // Only ignore answers if we have BOTH a remote stream AND the peer is connected
+      // This prevents processing stale answers after connection is established
       if (data.type === "answer") {
         const hasRemoteStream = remoteVideo && remoteVideo.srcObject;
-        if (hasRemoteStream) {
-          log("⚠️ Ignoring stale answer - connection already established");
+        // Only ignore if we have remote stream AND peer is connected
+        // This means we have an active connection, so any additional answer is stale
+        if (hasRemoteStream && hasConnected) {
+          log("⚠️ Ignoring stale answer - active connection already established");
           return;
         }
+        // Note: We don't clear stream here if !hasConnected because:
+        // - During normal connection, hasConnected might not be set yet when answer arrives
+        // - The stream will be set when peer.on("stream") fires, which sets hasConnected
+        // - Clearing here would break normal connection flow
       }
       
       try {
@@ -308,50 +325,23 @@ function initWebSocket() {
         if (err.message && err.message.includes("destroyed")) {
           console.error("❌ Peer was destroyed, handling reconnection...");
           
-          // Check if we have a stale remote stream (from previous connection)
-          const hasRemoteStream = remoteVideo && remoteVideo.srcObject;
-          if (hasRemoteStream) {
-            // Clear stale remote stream and queue
-            log("🔄 Clearing stale remote stream from previous connection...");
-            remoteVideo.srcObject = null;
-            remoteVideo.classList.remove("playing");
-            // Clear queued signals - they're from the previous connection
-            queuedIncomingSignals = [];
-            // Show waiting screen again for host
-            if (waitingScreen && isHost) {
-              waitingScreen.classList.remove("hidden");
-              waitingScreen.classList.add("host-streaming");
-            }
-          }
+          // Clear stale remote stream if it exists
+          const hadStaleStream = clearStaleRemoteStream();
           
           // For host receiving answer: ignore it, will generate new offer
-          // For client or other signals: queue them (but we just cleared the queue, so only queue if no remote stream)
+          // For client or other signals: queue them if no stale stream was cleared
           if (data.type === "answer" && isHost) {
             log("⚠️ Ignoring stale answer from previous connection (host will generate new offer)");
-            // Still recreate peer to generate new offer
-            if (localStream) {
-              createPeerConnection(localStream);
-            } else {
-              initPeer();
-            }
-          } else if (!hasRemoteStream) {
-            // Only queue if we don't have a remote stream (fresh connection)
-            // Queue the signal for processing after peer is recreated
+            recreatePeerConnection();
+          } else if (!hadStaleStream) {
+            // Only queue if we didn't have a stale stream (fresh connection attempt)
             if (!queuedIncomingSignals.includes(data)) {
               queuedIncomingSignals.push(data);
             }
-            if (localStream) {
-              createPeerConnection(localStream);
-            } else {
-              initPeer();
-            }
+            recreatePeerConnection();
           } else {
-            // Has remote stream but peer destroyed - recreate without queueing
-            if (localStream) {
-              createPeerConnection(localStream);
-            } else {
-              initPeer();
-            }
+            // Had stale stream - recreate without queueing (stale signals already cleared)
+            recreatePeerConnection();
           }
         } else {
           console.error("Error signaling peer:", err);
@@ -521,10 +511,11 @@ function initPeer() {
         cameraEnumTimeout = setTimeout(async () => {
           cameraEnumTimeout = null;
           try {
-            availableCameras = await getAvailableCameras();
-            if (availableCameras.length > 1 && btnSwitchCamera) {
+            const cameras = await getAvailableCameras();
+            availableCameras = cameras; // Update global variable
+            if (cameras.length > 1 && btnSwitchCamera) {
               btnSwitchCamera.style.display = "block";
-              log(`📹 Found ${availableCameras.length} cameras`);
+              log(`📹 Found ${cameras.length} cameras`);
             }
           } catch (err) {
             console.error("Error enumerating cameras:", err);
@@ -691,9 +682,11 @@ function createPeerConnection(stream) {
       
       isRecreatingPeer = true;
       setTimeout(() => {
-        // Only recreate if this is still the current peer (wasn't destroyed) and we haven't connected
-        if (currentPeer && currentPeer === peer && !hasConnected) {
-          // Double-check we still don't have a remote stream before recreating
+        // Only recreate if:
+        // 1. The peer still exists (wasn't destroyed/replaced)
+        // 2. We haven't connected yet
+        // 3. We don't have a remote stream
+        if (peer && peer === currentPeer && !hasConnected) {
           const stillHasRemoteStream = remoteVideo && remoteVideo.srcObject;
           if (!stillHasRemoteStream) {
             logWarn("🔌 Peer closed without connecting, recreating...");
@@ -704,6 +697,7 @@ function createPeerConnection(stream) {
             isRecreatingPeer = false;
           }
         } else {
+          // Peer was destroyed/replaced or we connected - don't recreate
           isRecreatingPeer = false;
         }
       }, CONFIG.PEER_RECREATE_DELAY * 3); // Longer delay to avoid recreation loops
