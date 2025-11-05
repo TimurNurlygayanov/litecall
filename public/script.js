@@ -1,7 +1,6 @@
 // ====== room & role ======
 const params = new URLSearchParams(location.search);
 const room = params.get("id");
-const isHost = location.hash === "#host";
 
 if (!room) {
   location.replace("/");
@@ -11,6 +10,12 @@ if (!room) {
 // ====== DOM ======
 const localVideo = document.getElementById("local");
 const remoteVideo = document.getElementById("remote");
+const waitingScreen = document.getElementById("waiting-screen");
+const meetingLinkInput = document.getElementById("meeting-link");
+const copyLinkBtn = document.getElementById("copy-link-btn");
+
+// ====== Dynamic role assignment ======
+let isHost = false; // Will be set dynamically based on who joins first
 
 // ====== State ======
 let ws;
@@ -52,12 +57,30 @@ function initWebSocket() {
     console.log("✅ WS open");
     reconnectAttempts = 0;
     flushQueue();
-    if (!peer) initPeer(); // создаём Peer при первом подключении
+    // Wait for room-info message to determine if we're host before creating peer
+    // The room-info will be sent immediately by the server
   });
 
   ws.addEventListener("message", (event) => {
     try {
       const data = JSON.parse(event.data);
+      
+      // Handle room-info message from server
+      if (data.type === "room-info") {
+        isHost = data.isFirst;
+        console.log(`📋 Room info: isFirst=${data.isFirst}, totalClients=${data.totalClients}`);
+        console.log(`👤 Role: ${isHost ? "Host" : "Client"}`);
+        
+        // Start creating peer connection
+        // Host creates peer immediately, client creates peer when they receive room-info
+        if (!peer && !localStream) {
+          console.log(`⚙️ ${isHost ? "Host" : "Client"} detected, starting peer setup...`);
+          initPeer();
+        }
+        return;
+      }
+      
+      // Handle WebRTC signals
       if (!peer) {
         console.log("🕓 Incoming signal queued (peer not ready yet):", data.type || "candidate");
         queuedIncomingSignals.push(data);
@@ -176,6 +199,10 @@ function createPeerConnection(stream) {
   peer.on("stream", (stream) => {
     console.log("🎬 Remote stream received");
     remoteVideo.srcObject = stream;
+    // Hide waiting screen when remote stream is received
+    if (waitingScreen && !waitingScreen.classList.contains("hidden")) {
+      waitingScreen.classList.add("hidden");
+    }
   });
 
   peer.on("error", (err) => {
@@ -257,6 +284,36 @@ function createPeerConnection(stream) {
       }
     });
   }
+}
+
+// ====== Waiting Screen Setup ======
+if (meetingLinkInput) {
+  const meetingUrl = `${window.location.origin}/room?id=${room}`;
+  meetingLinkInput.value = meetingUrl;
+}
+
+if (copyLinkBtn && meetingLinkInput) {
+  copyLinkBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(meetingLinkInput.value);
+      copyLinkBtn.textContent = "Copied!";
+      copyLinkBtn.classList.add("copied");
+      setTimeout(() => {
+        copyLinkBtn.textContent = "Copy";
+        copyLinkBtn.classList.remove("copied");
+      }, 2000);
+    } catch (err) {
+      // Fallback for older browsers
+      meetingLinkInput.select();
+      document.execCommand("copy");
+      copyLinkBtn.textContent = "Copied!";
+      copyLinkBtn.classList.add("copied");
+      setTimeout(() => {
+        copyLinkBtn.textContent = "Copy";
+        copyLinkBtn.classList.remove("copied");
+      }, 2000);
+    }
+  });
 }
 
 // ====== Start ======

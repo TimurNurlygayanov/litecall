@@ -7,15 +7,65 @@ import { fileURLToPath } from "url";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const callsFile = "./calls.json";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Если файла со счётчиком нет — создаём
-if (!fs.existsSync(callsFile)) {
-  fs.writeFileSync(callsFile, JSON.stringify({ successful: 0 }));
+// Use persistent data directory (defaults to /data for persistent storage)
+// Can be overridden via DATA_DIR environment variable
+const dataDir = process.env.DATA_DIR || "/data";
+const callsFile = path.join(dataDir, "calls.json");
+
+// Ensure data directory exists
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+  console.log(`📁 Created data directory: ${dataDir}`);
+} else {
+  console.log(`📁 Using persistent data directory: ${dataDir}`);
 }
+
+// Initialize counter file if it doesn't exist
+function loadCounter() {
+  try {
+    if (fs.existsSync(callsFile)) {
+      const data = JSON.parse(fs.readFileSync(callsFile, "utf8"));
+      return data.successful || 0;
+    }
+  } catch (err) {
+    console.error("❌ Error reading counter file:", err);
+  }
+  return 0;
+}
+
+function saveCounter(count) {
+  try {
+    fs.writeFileSync(callsFile, JSON.stringify({ successful: count }), "utf8");
+    console.log(`💾 Counter saved: ${count}`);
+  } catch (err) {
+    console.error("❌ Error saving counter:", err);
+  }
+}
+
+// Migrate old counter file if it exists
+const oldCallsFile = path.join(__dirname, "calls.json");
+if (fs.existsSync(oldCallsFile) && !fs.existsSync(callsFile)) {
+  try {
+    const oldData = JSON.parse(fs.readFileSync(oldCallsFile, "utf8"));
+    const oldCount = oldData.successful || 0;
+    if (oldCount > 0) {
+      saveCounter(oldCount);
+      console.log(`🔄 Migrated counter from old file: ${oldCount}`);
+      // Optionally remove old file after migration
+      // fs.unlinkSync(oldCallsFile);
+    }
+  } catch (err) {
+    console.error("❌ Error migrating old counter:", err);
+  }
+}
+
+// Load initial counter
+let callCount = loadCounter();
+console.log(`📊 Initial call count loaded: ${callCount}`);
 
 const connections = {}; // roomId -> [clients]
 const lastSignals = {}; // roomId -> last offer/answer
@@ -36,8 +86,13 @@ app.get("/room", (req, res) => {
 
 // API для статистики звонков
 app.get("/stats", (req, res) => {
-  const data = JSON.parse(fs.readFileSync(callsFile));
-  res.json(data);
+  try {
+    const count = loadCounter();
+    res.json({ successful: count });
+  } catch (err) {
+    console.error("❌ Error reading stats:", err);
+    res.json({ successful: callCount });
+  }
 });
 
 // Запускаем HTTP-сервер
@@ -58,9 +113,25 @@ wss.on("connection", (ws, req) => {
   }
 
   if (!connections[roomId]) connections[roomId] = [];
+  const isFirst = connections[roomId].length === 0;
   connections[roomId].push(ws);
 
   console.log(`👥 Client joined room "${roomId}" (${connections[roomId].length} total)`);
+
+  // Increment counter when second person joins (call is established)
+  if (connections[roomId].length === 2) {
+    callCount++;
+    saveCounter(callCount);
+    console.log(`📈 Call count incremented: ${callCount}`);
+  }
+
+  // Send room info to the new client
+  ws.send(JSON.stringify({
+    type: "room-info",
+    roomId: roomId,
+    isFirst: isFirst,
+    totalClients: connections[roomId].length
+  }));
 
   // If this room already has stored signal — send it to the newcomer
   if (lastSignals[roomId]) {

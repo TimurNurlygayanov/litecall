@@ -185,7 +185,7 @@
   <script>
     document.getElementById("create").onclick = () => {
       const id = Math.random().toString(36).substring(2, 8);
-      location.href = `/room?id=${id}#host`;
+      location.href = `/room?id=${id}`;
     };
 
     async function updateCounter() {

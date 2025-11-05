@@ -2,53 +2,250 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LiteCall video room</title>
   <style>
-    html, body { margin: 0; background: #000; height: 100%; overflow: hidden; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      background: #000;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
     #remote, #local {
       position: fixed;
       width: 100vw;
       height: 100vh;
       object-fit: cover;
+      transition: opacity 0.3s ease;
     }
-    #local { width: 30vw; height: 30vh; bottom: 10px; right: 10px; border: 2px solid white; }
 
-    /* Панель кнопок */
-#controls {
-  position: absolute;
-  bottom: 5%;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 24px;
-  z-index: 10;
-}
+    #local {
+      width: 30vw;
+      height: 30vh;
+      bottom: 10px;
+      right: 10px;
+      border: 3px solid rgba(255, 255, 255, 0.9);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      z-index: 5;
+    }
 
-/* Кнопки */
-#controls button {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-  font-size: 28px;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: background 0.2s ease, transform 0.1s ease;
-}
+    /* Waiting Screen */
+    #waiting-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      color: white;
+      padding: 2rem;
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+    }
 
-#controls button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
-}
+    #waiting-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .waiting-content {
+      text-align: center;
+      max-width: 600px;
+      width: 100%;
+    }
+
+    .waiting-title {
+      font-size: 2.5rem;
+      font-weight: 300;
+      margin-bottom: 3rem;
+      letter-spacing: -0.5px;
+    }
+
+    .link-widget {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .link-label {
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin-bottom: 0.75rem;
+      text-align: left;
+    }
+
+    .link-container {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .link-input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      color: white;
+      font-size: 0.95rem;
+      font-family: 'Monaco', 'Menlo', monospace;
+      outline: none;
+    }
+
+    .link-input::placeholder {
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      padding: 0.75rem 1.5rem;
+      color: white;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.35);
+      transform: translateY(-2px);
+    }
+
+    .copy-btn:active {
+      transform: translateY(0);
+    }
+
+    .copy-btn.copied {
+      background: #00bfa6;
+      border-color: #00bfa6;
+    }
+
+    /* Controls */
+    #controls {
+      position: absolute;
+      bottom: 5%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 24px;
+      z-index: 10;
+    }
+
+    #controls button {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      font-size: 28px;
+      cursor: pointer;
+      backdrop-filter: blur(20px);
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    #controls button:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    #controls button:active {
+      transform: scale(0.95);
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+      #local {
+        width: 35vw;
+        height: 25vh;
+        bottom: 80px;
+        right: 10px;
+        border-radius: 12px;
+      }
+
+      #controls {
+        bottom: 2rem;
+        gap: 16px;
+      }
+
+      #controls button {
+        width: 72px;
+        height: 72px;
+        font-size: 32px;
+      }
+
+      .waiting-title {
+        font-size: 1.75rem;
+        margin-bottom: 2rem;
+      }
+
+      .link-widget {
+        padding: 1.25rem;
+      }
+
+      .link-container {
+        flex-direction: column;
+      }
+
+      .copy-btn {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #controls button {
+        width: 80px;
+        height: 80px;
+        font-size: 36px;
+      }
+
+      #local {
+        width: 40vw;
+        height: 22vh;
+      }
+    }
   </style>
 </head>
 <body>
+  <!-- Waiting Screen -->
+  <div id="waiting-screen">
+    <div class="waiting-content">
+      <h1 class="waiting-title">Waiting for another person to join the call</h1>
+      <div class="link-widget">
+        <div class="link-label">Meeting link</div>
+        <div class="link-container">
+          <input type="text" id="meeting-link" class="link-input" readonly />
+          <button id="copy-link-btn" class="copy-btn">Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <video id="remote" autoplay playsinline></video>
   <video id="local" autoplay playsinline muted></video>
 
-  <!-- Панель управления -->
+  <!-- Controls -->
   <div id="controls">
     <button id="btn-mute" title="Mute / Unmute">🎤</button>
     <button id="btn-camera" title="Toggle Camera">🎥</button>
