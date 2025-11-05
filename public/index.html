@@ -2,17 +2,153 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LiteCall App</title>
   <style>
-    body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #111; color: #fff; }
-    button { padding: 1em 2em; font-size: 18px; border: none; border-radius: 10px; background: #00bfa6; color: white; cursor: pointer; }
-    #counter { margin-top: 20px; font-size: 16px; opacity: 0.8; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #ffffff;
+      color: #333;
+      overflow-x: hidden;
+    }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .page-1 {
+      background: #ffffff;
+    }
+
+    .page-2 {
+      background: #f8f9fa;
+      color: #333;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 2rem;
+      text-align: center;
+      color: #333;
+    }
+
+    button {
+      padding: 1em 2em;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      background: #00bfa6;
+      color: white;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 191, 166, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    #counter {
+      margin-top: 20px;
+      font-size: 16px;
+      color: #666;
+    }
+
+    .features {
+      max-width: 600px;
+      text-align: center;
+    }
+
+    .features h2 {
+      font-size: 2rem;
+      margin-bottom: 2rem;
+      color: #333;
+    }
+
+    .features ul {
+      list-style: none;
+      font-size: 1.2rem;
+      line-height: 2;
+    }
+
+    .features li {
+      margin: 1rem 0;
+      padding: 1rem;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .scroll-indicator {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #666;
+      font-size: 14px;
+      animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-10px); }
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2rem;
+      }
+      .features h2 {
+        font-size: 1.5rem;
+      }
+      .features ul {
+        font-size: 1rem;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Private and free 1:1 video calls</h1>
-  <button id="create">Start a call</button>
-  <div id="counter"></div>
+  <!-- First Page -->
+  <div class="page page-1">
+    <h1>Private and free 1:1 video calls</h1>
+    <button id="create">Start a call</button>
+    <div id="counter"></div>
+    <div class="scroll-indicator">Scroll down to learn more</div>
+  </div>
+
+  <!-- Second Page -->
+  <div class="page page-2">
+    <div class="features">
+      <h2>About Our Service</h2>
+      <ul>
+        <li>We provide free peer-to-peer 1:1 meetings</li>
+        <li>We do not require any authentification</li>
+        <li>We do not track location & user data</li>
+        <li>We do not use cookies</li>
+        <li>All calls are secure with SSL encription</li>
+        <li><strong>So it is private, secure and free</strong></li>
+      </ul>
+    </div>
+  </div>
 
   <script>
     document.getElementById("create").onclick = () => {
@@ -29,6 +165,21 @@
 
     updateCounter();
     setInterval(updateCounter, 50);
+
+    // Hide scroll indicator when user scrolls
+    let scrollIndicator = document.querySelector('.scroll-indicator');
+    let scrollTimeout;
+    window.addEventListener('scroll', () => {
+      if (scrollIndicator) {
+        scrollIndicator.style.opacity = '0';
+      }
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        if (scrollIndicator && window.scrollY < window.innerHeight / 2) {
+          scrollIndicator.style.opacity = '1';
+        }
+      }, 1000);
+    });
   </script>
 </body>
 </html>

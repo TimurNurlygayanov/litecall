@@ -22,6 +22,7 @@ let reconnectAttempts = 0;
 let reconnecting = false;
 let isRecreatingPeer = false; // prevent multiple simultaneous recreations
 let hasConnected = false; // track if we've ever successfully connected
+let disconnectedTimeout = null; // timeout for disconnected state
 
 const proto = location.protocol === "https:" ? "wss" : "ws";
 const wsUrl = `${proto}://${location.host}/?room=${encodeURIComponent(room)}`;
@@ -111,6 +112,11 @@ function initPeer() {
       peer.destroy();
     } catch (_) {}
     peer = null;
+  }
+  // Clear any pending timeouts
+  if (disconnectedTimeout) {
+    clearTimeout(disconnectedTimeout);
+    disconnectedTimeout = null;
   }
   isRecreatingPeer = false; // Reset flag when starting new peer
   hasConnected = false; // Reset connection status for new peer
@@ -213,17 +219,47 @@ function createPeerConnection(stream) {
   
   peer.on("iceConnectionStateChange", (state) => {
     console.log("🧊 ICE conn:", state);
-    // Handle connection failures through ICE state changes
-    // Only recreate if we haven't successfully connected yet
-    // (to avoid recreating on temporary disconnects after successful connection)
-    if ((state === "failed" || (state === "disconnected" && !hasConnected)) && !isRecreatingPeer) {
+    
+    // Clear any pending disconnected timeout
+    if (disconnectedTimeout) {
+      clearTimeout(disconnectedTimeout);
+      disconnectedTimeout = null;
+    }
+    
+    // Handle successful connection
+    if (state === "connected" || state === "completed") {
+      hasConnected = true;
+      return;
+    }
+    
+    // Only recreate on "failed" - not on "disconnected" which is often temporary
+    // "disconnected" can happen during normal connection establishment
+    if (state === "failed" && !isRecreatingPeer && !hasConnected) {
       if (ws && ws.readyState === WebSocket.OPEN) {
-        console.log(`♻️ ICE connection ${state}, recreating peer...`);
+        console.log(`♻️ ICE connection failed, recreating peer...`);
         isRecreatingPeer = true;
         setTimeout(() => {
           isRecreatingPeer = false;
           initPeer();
-        }, 500); // Reduced delay for faster recovery
+        }, 500);
+      }
+    }
+    
+    // For "disconnected" state, wait longer before considering it a failure
+    // Give it time to recover (disconnected can be temporary during connection)
+    if (state === "disconnected" && !hasConnected && !isRecreatingPeer) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        console.log(`⚠️ ICE connection disconnected, waiting to see if it recovers...`);
+        disconnectedTimeout = setTimeout(() => {
+          if (!hasConnected && !isRecreatingPeer) {
+            console.log(`♻️ ICE still disconnected after 3s, recreating peer...`);
+            isRecreatingPeer = true;
+            setTimeout(() => {
+              isRecreatingPeer = false;
+              initPeer();
+            }, 500);
+          }
+        }, 3000); // Wait 3 seconds before considering it a failure
       }
     }
   });
