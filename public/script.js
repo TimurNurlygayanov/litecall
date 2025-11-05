@@ -239,7 +239,8 @@ function initWebSocket() {
       // Note: This handles late connections - if client connects 10+ minutes after host,
       // the host's peer might have closed, but we can recreate it when signals arrive
       if (!peer) {
-        // For host (initiator): ignore stale answers - we'll generate a new offer
+        // For host (initiator) receiving answer when peer doesn't exist: this is likely a stale answer
+        // from a previous connection. Ignore it and create peer to generate new offer.
         // For client (non-initiator): accept offers - we need them to connect
         if (data.type === "answer" && isHost) {
           log("⚠️ Ignoring stale answer from previous connection (host will generate new offer)");
@@ -274,36 +275,8 @@ function initWebSocket() {
       }
       
       // Peer exists - process signal immediately
-      // But check if peer was destroyed (can happen during reconnection)
-      if (!peer) {
-        // Peer was destroyed between check and here - recreate it
-        log("🔄 Peer was destroyed, recreating to process signal...");
-        queuedIncomingSignals.push(data);
-        if (localStream) {
-          createPeerConnection(localStream);
-        } else {
-          initPeer();
-        }
-        return;
-      }
-      
+      // This is the normal connection flow - host should process answers normally
       try {
-        // For host (initiator): don't process answers - we generate offers
-        // Answers are only valid for the client (non-initiator)
-        if (data.type === "answer" && isHost) {
-          log("⚠️ Host (initiator) received answer - ignoring (will generate new offer if peer recreated)");
-          // If peer was destroyed, recreate it to generate new offer
-          if (!peer) {
-            log("⚡ Creating peer to generate new offer...");
-            if (localStream) {
-              createPeerConnection(localStream);
-            } else {
-              initPeer();
-            }
-          }
-          return;
-        }
-        
         log("📥 Processing signal:", data.type || "candidate");
         peer.signal(data);
       } catch (err) {
@@ -741,26 +714,14 @@ function createPeerConnection(stream) {
 
   // Process any queued incoming signals IMMEDIATELY and SYNCHRONOUSLY
   // This is critical - signals must be processed right away for fastest connection
-  // But filter out stale answers for host (initiator) - they should generate new offers
+  // Note: We only filter stale answers when peer doesn't exist (handled above)
+  // Once peer exists, we process all signals normally (including answers for host during normal flow)
   if (queuedIncomingSignals.length > 0) {
     log(`⚡ Processing ${queuedIncomingSignals.length} queued signals immediately...`);
     // Process signals synchronously, in order - no delays
     const signalsToProcess = [...queuedIncomingSignals];
     queuedIncomingSignals = [];
-    
-    // Filter signals based on role
-    const filteredSignals = [];
-    for (const signal of signalsToProcess) {
-      // For host (initiator): ignore stale answers - we generate offers, not process answers
-      // Only process answers if we're the client (non-initiator)
-      if (signal.type === "answer" && isHost) {
-        log(`⚠️ Filtering out stale answer for host (initiator generates offers)`);
-        continue;
-      }
-      filteredSignals.push(signal);
-    }
-    
-    filteredSignals.forEach((signal) => {
+    signalsToProcess.forEach((signal) => {
       try {
         log(`📥 Processing queued signal: ${signal.type || 'candidate'}`);
         peer.signal(signal);
@@ -768,7 +729,7 @@ function createPeerConnection(stream) {
         console.error("Error processing queued signal:", err);
       }
     });
-    log(`✅ Finished processing ${filteredSignals.length} queued signals (${signalsToProcess.length - filteredSignals.length} filtered)`);
+    log(`✅ Finished processing ${signalsToProcess.length} queued signals`);
   } else {
     log(`📋 No queued signals to process (${queuedIncomingSignals.length} queued)`);
   }
