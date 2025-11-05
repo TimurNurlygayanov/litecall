@@ -236,14 +236,27 @@ wss.on("connection", (ws, req) => {
   });
 
   ws.on("close", () => {
+    const wasHost = hosts[roomId] === ws;
     connections[roomId] = connections[roomId].filter((c) => c !== ws);
+    
+    // IMPORTANT: Clear stored signals when a client disconnects to prevent stale offers/answers
+    // When they reconnect, the host will generate a fresh offer
+    if (wasHost) {
+      // If host disconnected, clear stored signals (host will generate new offer when reconnecting client joins)
+      delete lastSignals[roomId];
+      console.log(`🧹 Cleared stored signals for room "${roomId}" (host disconnected)`);
+    } else {
+      // If client disconnected, also clear stored signals so reconnecting client gets fresh offer from host
+      delete lastSignals[roomId];
+      console.log(`🧹 Cleared stored signals for room "${roomId}" (client disconnected - will get fresh offer on reconnect)`);
+    }
+    
     if (connections[roomId].length === 0) {
       delete connections[roomId];
-      delete lastSignals[roomId];
       delete hosts[roomId]; // Clean up host tracking when room is empty
     } else {
       // If the host disconnected, we need to reassign a new host (the first remaining client)
-      if (hosts[roomId] === ws) {
+      if (wasHost) {
         const remainingClients = connections[roomId];
         if (remainingClients.length > 0) {
           hosts[roomId] = remainingClients[0]; // First remaining client becomes host

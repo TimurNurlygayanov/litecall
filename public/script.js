@@ -361,6 +361,8 @@ function initWebSocket() {
           return;
         }
         
+        // For client: if we receive an offer but don't have a peer yet, queue it
+        // But we'll also check if it's stale when we create the peer
         log(`🕓 Incoming signal queued (peer not ready yet): ${data.type || "candidate"}`);
         queuedIncomingSignals.push(data);
         log(`📋 Total queued signals: ${queuedIncomingSignals.length}`);
@@ -1018,12 +1020,13 @@ async function switchCamera() {
     log(`📹 Switching from camera ${currentCameraIndex + 1} to ${nextIndex + 1}`);
     
     // Get new video track with selected camera
+    // On mobile, we may need to include audio to maintain permissions, but we'll only use the video track
     const newStream = await navigator.mediaDevices.getUserMedia({
       video: { 
         deviceId: { exact: newCameraId },
         ...CONFIG.VIDEO
       },
-      audio: false, // Keep existing audio track
+      audio: localStream ? localStream.getAudioTracks().length > 0 : false, // Include audio if we had it before (for mobile permission handling)
     });
     
     const newVideoTrack = newStream.getVideoTracks()[0];
@@ -1062,9 +1065,11 @@ async function switchCamera() {
       oldVideoTrack.stop();
     }
     
-    // Stop the temporary stream (we only needed the track)
-    newStream.getVideoTracks().forEach(track => {
-      if (track !== newVideoTrack) track.stop();
+    // Stop the temporary stream tracks (we only needed the video track)
+    newStream.getTracks().forEach(track => {
+      if (track !== newVideoTrack) {
+        track.stop();
+      }
     });
     
     // Update current camera index
@@ -1073,6 +1078,28 @@ async function switchCamera() {
     log(`📹 Switched to camera: ${availableCameras[nextIndex].label || 'Camera ' + (nextIndex + 1)}`);
   } catch (err) {
     console.error("Error switching camera:", err);
+    
+    // On mobile, sometimes we need to request permission again
+    if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+      log("⚠️ Permission needed for camera switch - requesting access...");
+      try {
+        // Request permission again with both video and audio
+        const permissionStream = await navigator.mediaDevices.getUserMedia({
+          video: CONFIG.VIDEO,
+          audio: CONFIG.AUDIO
+        });
+        // Stop the permission stream and try switching again
+        permissionStream.getTracks().forEach(track => track.stop());
+        // Retry camera switch after a brief delay
+        setTimeout(() => switchCamera(), 300);
+        return;
+      } catch (permErr) {
+        console.error("Permission request failed:", permErr);
+        alert("Camera permission is required to switch cameras.");
+        return;
+      }
+    }
+    
     // If switching fails, try to re-enumerate and show button if cameras are available
     setTimeout(async () => {
       try {
@@ -1096,6 +1123,38 @@ btnSwitchCamera = document.getElementById("btn-switch-camera");
 const btnFullscreen = document.getElementById("btn-fullscreen");
 const btnLeave = document.getElementById("btn-leave");
 
+// Hide fullscreen button on mobile (when switch camera button is visible)
+// Fullscreen doesn't work well on mobile browsers
+if (btnFullscreen) {
+  // Check if we're on mobile by screen size or user agent
+  const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if (isMobile) {
+    btnFullscreen.style.display = "none";
+    log("📱 Mobile device detected - hiding fullscreen button");
+  }
+  
+  // Also hide fullscreen when switch camera button is visible (mobile with multiple cameras)
+  const checkButtonVisibility = () => {
+    if (btnSwitchCamera && btnSwitchCamera.style.display !== "none" && btnSwitchCamera.style.display !== "") {
+      if (btnFullscreen) {
+        btnFullscreen.style.display = "none";
+        log("📱 Switch camera visible - hiding fullscreen button");
+      }
+    } else if (btnFullscreen && !isMobile) {
+      // Show fullscreen on desktop if switch camera is not visible
+      btnFullscreen.style.display = "block";
+    }
+  };
+  
+  // Check initially and whenever cameras are enumerated
+  setTimeout(checkButtonVisibility, 500); // Check after cameras are enumerated
+  
+  // Observe switch camera button visibility changes
+  if (btnSwitchCamera) {
+    const observer = new MutationObserver(checkButtonVisibility);
+    observer.observe(btnSwitchCamera, { attributes: true, attributeFilter: ['style'] });
+  }
+}
 
 let isMuted = false;
 let isCameraOff = false;
