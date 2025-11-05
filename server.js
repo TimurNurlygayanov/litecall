@@ -1,114 +1,89 @@
-// Получаем параметры комнаты и роль
-const params = new URLSearchParams(location.search);
-const room = params.get("id");
-const isHost = location.hash === "#host";
+import express from "express";
+import { WebSocketServer } from "ws";
+import fs from "fs";
+import url from "url";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// Создаём WebSocket-соединение
-const ws = new WebSocket(`${location.origin.replace("http", "ws")}/?room=${room}`);
+const app = express();
+const PORT = process.env.PORT || 3000;
+const callsFile = "./calls.json";
 
-// Настраиваем WebRTC peer
-const peer = new SimplePeer({
-  initiator: isHost,
-  trickle: false,
-  config: {
-    iceServers: [
-      { urls: "stun:stun.l.google.com:19302" } // STUN-сервер для обхода NAT
-    ]
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Если файла со счётчиком нет — создаём
+if (!fs.existsSync(callsFile)) {
+  fs.writeFileSync(callsFile, JSON.stringify({ successful: 0 }));
+}
+
+let connections = {}; // roomId -> [clients]
+
+// Отдаём статические файлы из public/
+app.use(express.static("public"));
+
+// ✅ Фикс: поддержка прямого перехода на /room?id=...
+app.get("/room", (req, res) => {
+  const id = req.query.id;
+  if (!id) {
+    // если id отсутствует — просто редирект на главную
+    return res.redirect("/");
   }
+  res.sendFile(path.join(__dirname, "public", "room.html"));
 });
 
-const localVideo = document.getElementById("local");
-const remoteVideo = document.getElementById("remote");
+// API для статистики звонков
+app.get("/stats", (req, res) => {
+  const data = JSON.parse(fs.readFileSync(callsFile));
+  res.json(data);
+});
 
-let wsReady = false;
-let queuedSignals = [];
+// Запускаем HTTP-сервер
+const server = app.listen(PORT, () =>
+  console.log(`✅ Server running on port ${PORT}`)
+);
 
-// Когда WebSocket готов
-ws.onopen = () => {
-  console.log("✅ WebSocket connected");
-  wsReady = true;
+// Создаём WebSocket-сервер на базе HTTP
+const wss = new WebSocketServer({ server });
 
-  // Отправляем все сигналы, которые накопились до подключения
-  queuedSignals.forEach((s) => ws.send(s));
-  queuedSignals = [];
-};
+wss.on("connection", (ws, req) => {
+  // Безопасно парсим URL независимо от домена
+  const parsedUrl = url.parse(req.url, true);
+  const roomId = parsedUrl.query.room;
 
-// Если соединение закрыто
-ws.onclose = () => {
-  console.log("⚠️ WebSocket closed");
-  wsReady = false;
-};
-
-// Если пришло сообщение по WebSocket
-ws.onmessage = (event) => {
-  try {
-    const data = JSON.parse(event.data);
-    console.log("📩 Signal received from remote peer");
-    peer.signal(data);
-  } catch (e) {
-    console.error("Ошибка обработки сигнала:", e);
+  if (!roomId) {
+    console.warn("⚠️ Client connected without room ID, closing...");
+    ws.close();
+    return;
   }
-};
 
-// Когда peer готов отправлять свой сигнал
-peer.on("signal", (data) => {
-  const message = JSON.stringify(data);
-  if (wsReady) {
-    ws.send(message);
-    console.log("📨 Sent local signal");
-  } else {
-    queuedSignals.push(message);
-    console.log("🕓 Queued signal until WS is ready");
+  // Добавляем клиента в комнату
+  if (!connections[roomId]) connections[roomId] = [];
+  connections[roomId].push(ws);
+
+  console.log(`👥 Client joined room "${roomId}" (${connections[roomId].length} total)`);
+
+  // Если в комнате теперь двое — считаем звонок успешным
+  if (connections[roomId].length === 2) {
+    const data = JSON.parse(fs.readFileSync(callsFile));
+    data.successful += 1;
+    fs.writeFileSync(callsFile, JSON.stringify(data));
+    console.log(`📈 Successful calls: ${data.successful}`);
   }
-});
 
-// Получаем доступ к камере и микрофону
-navigator.mediaDevices
-  .getUserMedia({
-    video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-    audio: {
-      echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true,
-    },
-  })
-  .then((stream) => {
-    localVideo.srcObject = stream;
-    peer.addStream(stream);
-    console.log("🎥 Local stream added");
-  })
-  .catch((err) => console.error("Не удалось получить доступ к камере/микрофону:", err));
-
-// Когда установлено P2P-соединение
-peer.on("connect", () => {
-  console.log("✅ Peer connected!");
-});
-
-// Когда пришёл поток от собеседника
-peer.on("stream", (stream) => {
-  console.log("🎬 Remote stream received!");
-  remoteVideo.srcObject = stream;
-});
-
-// Ошибки WebRTC
-peer.on("error", (err) => {
-  console.error("❌ Peer error:", err);
-});
-
-peer.on("close", () => {
-  console.log("🔌 Peer connection closed");
-});
-
-// Для полноэкранного режима и предотвращения засыпания экрана
-document.body.addEventListener("click", async () => {
-  try {
-    if (document.fullscreenEnabled && !document.fullscreenElement) {
-      await document.body.requestFullscreen();
+  // Пересылаем сигналы между участниками
+  ws.on("message", (msg) => {
+    for (const client of connections[roomId]) {
+      if (client !== ws && client.readyState === 1) {
+        client.send(msg);
+      }
     }
-    if ("wakeLock" in navigator) {
-      await navigator.wakeLock.request("screen");
-    }
-  } catch (e) {
-    console.warn("Не удалось активировать fullscreen или wake lock:", e);
-  }
+  });
+
+  // Когда клиент отключается
+  ws.on("close", () => {
+    connections[roomId] = connections[roomId].filter((c) => c !== ws);
+    if (connections[roomId].length === 0) delete connections[roomId];
+    console.log(`❌ Client left room "${roomId}"`);
+  });
 });
