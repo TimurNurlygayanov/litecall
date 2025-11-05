@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LiteCall App</title>
+  <style>
+    body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #111; color: #fff; }
+    button { padding: 1em 2em; font-size: 18px; border: none; border-radius: 10px; background: #00bfa6; color: white; cursor: pointer; }
+    #counter { margin-top: 20px; font-size: 16px; opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <h1>Private and free 1:1 video calls</h1>
+  <button id="create">Start a call</button>
+  <div id="counter">Loading...</div>
+
+  <script>
+    document.getElementById("create").onclick = () => {
+      const id = Math.random().toString(36).substring(2, 8);
+      location.href = `/room.html?id=${id}#host`;
+    };
+
+    async function updateCounter() {
+      const res = await fetch("/stats");
+      const data = await res.json();
+      document.getElementById("counter").textContent =
+        `Total calls done: ${data.successful}`;
+    }
+
+    updateCounter();
+    setInterval(updateCounter, 5000);
+  </script>
+</body>
+</html>
+
