@@ -16,7 +16,8 @@ const remoteVideo = document.getElementById("remote");
 let ws;
 let peer;
 let localStream;
-let queuedSignals = [];
+let queuedSignals = []; // outgoing signals
+let queuedIncomingSignals = []; // incoming signals waiting for peer
 let reconnectAttempts = 0;
 let reconnecting = false;
 
@@ -56,8 +57,14 @@ function initWebSocket() {
     try {
       const data = JSON.parse(event.data);
       if (!peer) {
-        console.log("⚙️ Recreating peer after reload...");
-        initPeer();
+        console.log("🕓 Incoming signal queued (peer not ready yet):", data.type || "candidate");
+        queuedIncomingSignals.push(data);
+        // Start peer creation if not already in progress
+        if (!localStream) {
+          console.log("⚙️ Creating peer to process queued signals...");
+          initPeer();
+        }
+        return;
       }
       peer.signal(data);
     } catch (err) {
@@ -145,6 +152,15 @@ function createPeerConnection(stream) {
   // Add stream immediately, before any signaling starts
   peer.addStream(stream);
   console.log("📹 Stream added to peer connection");
+
+  // Process any queued incoming signals
+  if (queuedIncomingSignals.length > 0) {
+    console.log(`🚚 Processing ${queuedIncomingSignals.length} queued incoming signals...`);
+    queuedIncomingSignals.forEach((signal) => {
+      peer.signal(signal);
+    });
+    queuedIncomingSignals = [];
+  }
 
   peer.on("signal", (data) => {
       const msg = JSON.stringify(data);
