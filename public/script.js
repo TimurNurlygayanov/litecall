@@ -71,6 +71,17 @@ function initWebSocket() {
         console.log(`📋 Room info: isFirst=${data.isFirst}, totalClients=${data.totalClients}`);
         console.log(`👤 Role: ${isHost ? "Host" : "Client"}`);
         
+        // If client joins and host is already active (totalClients > 1), hide waiting screen immediately
+        if (!isHost && data.totalClients > 1 && waitingScreen) {
+          console.log("👥 Host already active, hiding waiting screen...");
+          waitingScreen.classList.add("hidden");
+          // Ensure controls are visible
+          const controls = document.getElementById("controls");
+          if (controls) {
+            controls.style.display = "flex";
+          }
+        }
+        
         // Start creating peer connection
         // Host creates peer immediately, client creates peer when they receive room-info
         if (!peer && !localStream) {
@@ -209,7 +220,22 @@ function createPeerConnection(stream) {
 
   peer.on("stream", (stream) => {
     console.log("🎬 Remote stream received");
+    
+    // Ensure controls are visible immediately
+    const controls = document.getElementById("controls");
+    if (controls) {
+      controls.style.display = "flex";
+      controls.style.visibility = "visible";
+    }
+    
+    // Set the stream to video element
     remoteVideo.srcObject = stream;
+    
+    // Ensure video plays with audio
+    remoteVideo.muted = false;
+    remoteVideo.play().catch(err => {
+      console.error("Error playing remote video:", err);
+    });
     
     // Wait for video to actually start playing before hiding waiting screen
     // This prevents the black flash between waiting screen and video
@@ -224,6 +250,7 @@ function createPeerConnection(stream) {
         }, 200);
       }
       remoteVideo.removeEventListener("playing", handleVideoPlaying);
+      remoteVideo.removeEventListener("loadedmetadata", handleVideoPlaying);
     };
     
     // Listen for when video actually starts playing
@@ -232,6 +259,7 @@ function createPeerConnection(stream) {
       handleVideoPlaying();
     } else {
       remoteVideo.addEventListener("playing", handleVideoPlaying);
+      remoteVideo.addEventListener("loadedmetadata", handleVideoPlaying);
     }
   });
 

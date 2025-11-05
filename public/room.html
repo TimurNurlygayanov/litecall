@@ -68,6 +68,7 @@
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
+      display: none; /* Completely remove from layout when hidden */
     }
 
     .waiting-content {
@@ -162,7 +163,7 @@
       transform: translateX(-50%);
       display: flex;
       gap: 24px;
-      z-index: 10; /* Lower than local video (z-index: 15) */
+      z-index: 20; /* Higher than local video and waiting screen */
     }
 
     #controls button {
@@ -193,12 +194,12 @@
       min-height: 28px;
     }
 
-    /* Ensure mic-off icon is properly sized */
+    /* Ensure mic-off icon is 2x bigger */
     #controls button img[src*="mic-off"] {
-      width: 28px;
-      height: 28px;
-      min-width: 28px;
-      min-height: 28px;
+      width: 56px;
+      height: 56px;
+      min-width: 56px;
+      min-height: 56px;
     }
 
     /* Special handling for PNG images (camera-on.png) */
@@ -222,14 +223,16 @@
       #local {
         width: 35vw;
         height: 25vh;
-        bottom: 80px;
+        bottom: 160px; /* Move higher to avoid covering controls (controls are ~104px from bottom) */
         right: 10px;
         border-radius: 12px;
+        z-index: 15; /* Lower than controls but higher than remote video */
       }
 
       #controls {
         bottom: 2rem;
         gap: 16px;
+        z-index: 20; /* Ensure controls are on top */
       }
 
       #controls button {
@@ -237,6 +240,10 @@
         height: 72px;
         font-size: 32px;
       }
+      
+      /* Adjust local video position to be above controls */
+      /* Controls are 72px tall + 2rem (32px) bottom = ~104px from bottom */
+      /* Local video should be above this */
 
       .waiting-title {
         font-size: 1.75rem;
@@ -266,6 +273,7 @@
       #local {
         width: 40vw;
         height: 22vh;
+        bottom: 170px; /* Move higher on smaller screens (controls are larger: 80px + 32px = 112px) */
       }
     }
   </style>
