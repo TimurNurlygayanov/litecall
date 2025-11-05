@@ -237,13 +237,27 @@ function initWebSocket() {
       
       // Handle WebRTC signals
       // Note: This handles late connections - if client connects 10+ minutes after host,
-      // the host's peer might have closed, but we can recreate it when the answer arrives
+      // the host's peer might have closed, but we can recreate it when signals arrive
       if (!peer) {
+        // For host (initiator): ignore stale answers - we'll generate a new offer
+        // For client (non-initiator): accept offers - we need them to connect
+        if (data.type === "answer" && isHost) {
+          log("⚠️ Ignoring stale answer from previous connection (host will generate new offer)");
+          // Still create peer if we don't have one, but don't queue the stale answer
+          if (localStream) {
+            log("⚡ Creating peer to generate new offer...");
+            createPeerConnection(localStream);
+          } else {
+            initPeer();
+          }
+          return;
+        }
+        
         log("🕓 Incoming signal queued (peer not ready yet):", data.type || "candidate");
         queuedIncomingSignals.push(data);
         
         // If we have a stream, create peer IMMEDIATELY to process signals
-        // This is critical for late connections - host can recreate peer when answer arrives
+        // This is critical for late connections - host can recreate peer when signals arrive
         if (localStream) {
           log("⚡ Creating peer immediately to process incoming signal (late connection support)...");
           createPeerConnection(localStream);
@@ -274,14 +288,35 @@ function initWebSocket() {
       }
       
       try {
+        // For host (initiator): don't process answers - we generate offers
+        // Answers are only valid for the client (non-initiator)
+        if (data.type === "answer" && isHost) {
+          log("⚠️ Host (initiator) received answer - ignoring (will generate new offer if peer recreated)");
+          // If peer was destroyed, recreate it to generate new offer
+          if (!peer) {
+            log("⚡ Creating peer to generate new offer...");
+            if (localStream) {
+              createPeerConnection(localStream);
+            } else {
+              initPeer();
+            }
+          }
+          return;
+        }
+        
         log("📥 Processing signal:", data.type || "candidate");
         peer.signal(data);
       } catch (err) {
-        // If peer was destroyed, recreate it and queue the signal
+        // If peer was destroyed, recreate it (but don't queue stale answers for host)
         if (err.message && err.message.includes("destroyed")) {
           console.error("❌ Peer was destroyed, recreating...");
-          if (!queuedIncomingSignals.includes(data)) {
-            queuedIncomingSignals.push(data);
+          // Only queue non-answer signals for host, or all signals for client
+          if (data.type !== "answer" || !isHost) {
+            if (!queuedIncomingSignals.includes(data)) {
+              queuedIncomingSignals.push(data);
+            }
+          } else {
+            log("⚠️ Not queuing stale answer for host (will generate new offer)");
           }
           if (localStream) {
             createPeerConnection(localStream);
@@ -706,12 +741,26 @@ function createPeerConnection(stream) {
 
   // Process any queued incoming signals IMMEDIATELY and SYNCHRONOUSLY
   // This is critical - signals must be processed right away for fastest connection
+  // But filter out stale answers for host (initiator) - they should generate new offers
   if (queuedIncomingSignals.length > 0) {
     log(`⚡ Processing ${queuedIncomingSignals.length} queued signals immediately...`);
     // Process signals synchronously, in order - no delays
     const signalsToProcess = [...queuedIncomingSignals];
     queuedIncomingSignals = [];
-    signalsToProcess.forEach((signal) => {
+    
+    // Filter signals based on role
+    const filteredSignals = [];
+    for (const signal of signalsToProcess) {
+      // For host (initiator): ignore stale answers - we generate offers, not process answers
+      // Only process answers if we're the client (non-initiator)
+      if (signal.type === "answer" && isHost) {
+        log(`⚠️ Filtering out stale answer for host (initiator generates offers)`);
+        continue;
+      }
+      filteredSignals.push(signal);
+    }
+    
+    filteredSignals.forEach((signal) => {
       try {
         log(`📥 Processing queued signal: ${signal.type || 'candidate'}`);
         peer.signal(signal);
@@ -719,7 +768,7 @@ function createPeerConnection(stream) {
         console.error("Error processing queued signal:", err);
       }
     });
-    log(`✅ Finished processing ${signalsToProcess.length} queued signals`);
+    log(`✅ Finished processing ${filteredSignals.length} queued signals (${signalsToProcess.length - filteredSignals.length} filtered)`);
   } else {
     log(`📋 No queued signals to process (${queuedIncomingSignals.length} queued)`);
   }
