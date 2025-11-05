@@ -12,12 +12,12 @@
 <body>
   <h1>Private and free 1:1 video calls</h1>
   <button id="create">Start a call</button>
-  <div id="counter">Loading...</div>
+  <div id="counter"></div>
 
   <script>
     document.getElementById("create").onclick = () => {
       const id = Math.random().toString(36).substring(2, 8);
-      location.href = `/room.html?id=${id}#host`;
+      location.href = `/room?id=${id}#host`;
     };
 
     async function updateCounter() {
@@ -28,7 +28,7 @@
     }
 
     updateCounter();
-    setInterval(updateCounter, 5000);
+    setInterval(updateCounter, 50);
   </script>
 </body>
 </html>
