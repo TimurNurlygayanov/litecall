@@ -12,21 +12,22 @@ if (!room) {
 const localVideo = document.getElementById("local");
 const remoteVideo = document.getElementById("remote");
 
-// ====== WS state ======
+// ====== State ======
 let ws;
 let peer;
+let localStream;
 let queuedSignals = [];
 let reconnectAttempts = 0;
-let wsConnectedOnce = false;
+let reconnecting = false;
 
 const proto = location.protocol === "https:" ? "wss" : "ws";
 const wsUrl = `${proto}://${location.host}/?room=${encodeURIComponent(room)}`;
 
-// безопасная отправка
+// ====== Utility ======
 function safeSend(msg) {
   if (!ws || ws.readyState !== WebSocket.OPEN) {
     queuedSignals.push(msg);
-    console.log("🕓 queued signal (ws not ready)");
+    console.log("🕓 queued (ws not ready)");
     return;
   }
   ws.send(msg);
@@ -40,50 +41,62 @@ function flushQueue() {
   }
 }
 
-// ====== WebSocket init ======
+// ====== WebSocket setup ======
 function initWebSocket() {
   ws = new WebSocket(wsUrl);
 
   ws.addEventListener("open", () => {
-    console.log("✅ WebSocket OPEN");
+    console.log("✅ WS open");
     reconnectAttempts = 0;
-    wsConnectedOnce = true;
-    if (!peer) initPeer();
     flushQueue();
+    if (!peer) initPeer(); // создаём Peer при первом подключении
   });
 
   ws.addEventListener("message", (event) => {
     try {
       const data = JSON.parse(event.data);
-      if (peer) peer.signal(data);
-    } catch (e) {
-      console.error("WS message parse error:", e);
+      if (!peer) {
+        console.log("⚙️ Recreating peer after reload...");
+        initPeer();
+      }
+      peer.signal(data);
+    } catch (err) {
+      console.error("WS message parse error:", err);
     }
   });
 
-  ws.addEventListener("error", (e) => {
-    console.error("⚠️ WS error:", e.message);
+  ws.addEventListener("close", () => {
+    console.warn("⚠️ WS closed, reconnecting...");
+    scheduleReconnect();
   });
 
-  ws.addEventListener("close", (e) => {
-    console.warn(`❌ WS closed (code ${e.code})`);
-    attemptReconnect();
+  ws.addEventListener("error", (e) => {
+    console.error("⚠️ WS error:", e);
+    scheduleReconnect();
   });
 }
 
-// ====== Reconnect logic ======
-function attemptReconnect() {
+// ====== WebSocket reconnect ======
+function scheduleReconnect() {
+  if (reconnecting) return;
+  reconnecting = true;
   reconnectAttempts++;
-  const delay = Math.min(5000, 1000 * reconnectAttempts);
-  console.log(`🔁 Reconnecting in ${delay / 1000}s...`);
+  const delay = Math.min(5000, reconnectAttempts * 1000);
+  console.log(`🔁 Trying WS reconnect in ${delay / 1000}s...`);
   setTimeout(() => {
-    console.log("🔄 Reconnecting now...");
+    reconnecting = false;
     initWebSocket();
   }, delay);
 }
 
-// ====== Peer ======
+// ====== Peer setup ======
 function initPeer() {
+  if (peer) {
+    try {
+      peer.destroy();
+    } catch (_) {}
+  }
+
   peer = new SimplePeer({
     initiator: isHost,
     trickle: false,
@@ -92,21 +105,26 @@ function initPeer() {
     },
   });
 
-  navigator.mediaDevices
-    .getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-      },
-    })
-    .then((stream) => {
-      localVideo.srcObject = stream;
-      peer.addStream(stream);
-      console.log("🎥 local stream added");
-    })
-    .catch((err) => console.error("getUserMedia error:", err));
+  if (!localStream) {
+    navigator.mediaDevices
+      .getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      })
+      .then((stream) => {
+        localStream = stream;
+        localVideo.srcObject = stream;
+        peer.addStream(stream);
+        console.log("🎥 local stream ready");
+      })
+      .catch((err) => console.error("getUserMedia error:", err));
+  } else {
+    peer.addStream(localStream);
+  }
 
   peer.on("signal", (data) => {
     const msg = JSON.stringify(data);
@@ -114,27 +132,34 @@ function initPeer() {
   });
 
   peer.on("connect", () => {
-    console.log("✅ Peer CONNECTED");
+    console.log("✅ Peer connected!");
   });
 
   peer.on("stream", (stream) => {
-    console.log("🎬 remote stream received");
+    console.log("🎬 Remote stream received");
     remoteVideo.srcObject = stream;
   });
 
   peer.on("error", (err) => {
     console.error("❌ Peer error:", err);
+    // при разрушении создаём новый Peer, если WS живой
+    if (err.message.includes("Abort") || err.message.includes("destroyed")) {
+      console.log("♻️ Recreating peer...");
+      setTimeout(() => initPeer(), 1500);
+    }
   });
 
   peer.on("close", () => {
     console.warn("🔌 Peer closed");
+    // при закрытии тоже пересоздаём
+    setTimeout(() => initPeer(), 1500);
   });
 }
 
 // ====== Start ======
 initWebSocket();
 
-// ====== UX: fullscreen & wake lock ======
+// ====== Fullscreen & Wake Lock ======
 document.body.addEventListener("click", async () => {
   try {
     if (document.fullscreenEnabled && !document.fullscreenElement) {
