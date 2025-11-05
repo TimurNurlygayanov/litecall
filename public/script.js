@@ -1,5 +1,5 @@
 // ====== Debug Flag ======
-const DEBUG = false; // Set to true to enable verbose logging
+const DEBUG = true; // Set to true to enable verbose logging
 
 // ====== Logging Utility ======
 const log = (...args) => DEBUG && console.log(...args);
@@ -143,6 +143,7 @@ function initWebSocket() {
       
       // Handle WebRTC signals
       if (!peer) {
+        log("🕓 Incoming signal queued (peer not ready yet):", data.type || "candidate");
         queuedIncomingSignals.push(data);
         
         // If we have a stream, create peer IMMEDIATELY to process signals
@@ -163,6 +164,7 @@ function initWebSocket() {
       
       // Peer exists - process signal immediately
       try {
+        log("📥 Processing signal:", data.type || "candidate");
         peer.signal(data);
       } catch (err) {
         console.error("Error signaling peer:", err);
@@ -290,6 +292,7 @@ function initPeer() {
         localStream = stream;
         localVideo.srcObject = stream;
         log("🎥 Local stream ready, creating peer connection...");
+        log("🎥 isHost =", isHost);
         
         // Clear any existing timeout
         if (cameraEnumTimeout) {
@@ -338,6 +341,7 @@ function createPeerConnection(stream) {
   }
   
   // Create peer connection
+  log("🔧 Creating peer connection. isHost =", isHost, "initiator =", isHost);
   peer = new SimplePeer({
     initiator: isHost,
     trickle: CONFIG.TRICKLE,
@@ -351,7 +355,7 @@ function createPeerConnection(stream) {
   // Set up ALL event handlers FIRST, before adding stream or processing signals
   peer.on("signal", (data) => {
       const msg = JSON.stringify(data);
-      log("📤 Sending signal:", data.type);
+      log("📤 Sending signal:", data.type, data);
       safeSend(msg);
   });
 
