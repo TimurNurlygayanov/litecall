@@ -81,6 +81,7 @@ let fullscreenHandler = null; // for cleanup
 let videoPlayingHandler = null; // for cleanup
 let reconnectTimeout = null; // for cleanup
 let cameraEnumTimeout = null; // for cleanup
+let isRequestingMedia = false; // prevent multiple simultaneous getUserMedia calls
 
 const proto = location.protocol === "https:" ? "wss" : "ws";
 const wsUrl = `${proto}://${location.host}/?room=${encodeURIComponent(room)}`;
@@ -156,7 +157,8 @@ function initWebSocket() {
     flushQueue();
     // Start getting media stream immediately (for host, this shows their video right away)
     // We'll determine host/client role from room-info, but no need to wait for it to start streaming
-    if (!localStream) {
+    if (!localStream && !isRequestingMedia) {
+      isRequestingMedia = true;
       log("🎥 Starting media stream immediately...");
       // Get media stream first, then we'll create peer when we know our role
       navigator.mediaDevices
@@ -165,6 +167,7 @@ function initWebSocket() {
           audio: CONFIG.AUDIO,
         })
         .then(async (stream) => {
+          isRequestingMedia = false;
           localStream = stream;
           localVideo.srcObject = stream;
           log("🎥 Local stream ready");
@@ -206,6 +209,7 @@ function initWebSocket() {
           }, CONFIG.CAMERA_ENUM_DELAY);
         })
         .catch((err) => {
+          isRequestingMedia = false;
           console.error("getUserMedia error:", err);
           // Show user-friendly error message
           if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
@@ -214,6 +218,10 @@ function initWebSocket() {
             alert("No camera or microphone found.");
           }
         });
+    } else if (localStream) {
+      log("🎥 Stream already exists, skipping duplicate request");
+    } else if (isRequestingMedia) {
+      log("🎥 Media request already in progress, skipping duplicate request");
     }
   });
 
@@ -313,6 +321,7 @@ function initWebSocket() {
         
         // Now that we know our role, create peer connection if we have a stream
         // (Stream might already be ready from WS open handler)
+        // IMPORTANT: Don't call initPeer() here if localStream doesn't exist - it's already being requested in WS open handler
         const peerIsValid = isPeerValid(peer);
         if (localStream && !peerIsValid) {
           log(`⚡ ${isHost ? "Host" : "Client"} detected, creating peer connection with stream...`);
@@ -320,16 +329,11 @@ function initWebSocket() {
             peer = null; // Clean up destroyed peer reference
           }
           createPeerConnection(localStream);
-        } else if (!localStream && !peerIsValid) {
-          // Stream not ready yet, start getting it
-          log(`⚙️ ${isHost ? "Host" : "Client"} detected, starting peer setup...`);
-          if (peer && peer.destroyed) {
-            peer = null; // Clean up destroyed peer reference
-          }
-          initPeer();
         } else if (peerIsValid) {
           log(`ℹ️ Valid peer already exists (${isHost ? "Host" : "Client"}), skipping creation`);
         }
+        // Note: We don't call initPeer() here because getUserMedia is already being requested in WS open handler
+        // This prevents duplicate permission requests
         return;
       }
       
@@ -587,7 +591,9 @@ function initPeer() {
   hasConnected = false; // Reset connection status for new peer
 
   // Get or reuse stream FIRST, then create peer connection
-  if (!localStream) {
+  // IMPORTANT: Don't request media if we're already requesting it or already have it
+  if (!localStream && !isRequestingMedia) {
+    isRequestingMedia = true;
     log("🎥 Requesting media stream...");
     navigator.mediaDevices
       .getUserMedia({
@@ -595,6 +601,7 @@ function initPeer() {
         audio: CONFIG.AUDIO,
       })
       .then(async (stream) => {
+        isRequestingMedia = false;
         localStream = stream;
         localVideo.srcObject = stream;
         log("🎥 Local stream ready, creating peer connection...");
@@ -643,6 +650,7 @@ function initPeer() {
         }, CONFIG.CAMERA_ENUM_DELAY);
       })
       .catch((err) => {
+        isRequestingMedia = false;
         console.error("getUserMedia error:", err);
         // Show user-friendly error message
         if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
@@ -651,9 +659,12 @@ function initPeer() {
           alert("No camera or microphone found.");
         }
       });
-  } else {
+  } else if (localStream) {
     log("🎥 Reusing existing stream, creating peer connection...");
     createPeerConnection(localStream);
+  } else if (isRequestingMedia) {
+    log("🎥 Media request already in progress, will create peer when stream is ready");
+    // Don't do anything - the WS open handler will create the peer when stream is ready
   }
 }
 
@@ -960,7 +971,13 @@ let btnSwitchCamera = null; // Will be set after DOM is ready
 
 async function getAvailableCameras() {
   try {
-    // Enumerate devices - this requires camera permission to get labels
+    // Enumerate devices - this should NOT request permission if we already have a stream
+    // Only call this if we already have localStream to avoid permission prompts
+    if (!localStream) {
+      log("⚠️ Cannot enumerate cameras - no active stream (permission might be needed)");
+      return [];
+    }
+    
     const devices = await navigator.mediaDevices.enumerateDevices();
     const cameras = devices.filter(device => device.kind === 'videoinput');
     
@@ -969,8 +986,8 @@ async function getAvailableCameras() {
       return cameras;
     }
     
-    // If no labels, we might not have permission yet
-    // Return empty array and permission will be requested when switching
+    // If no labels but we have a stream, we still have permission - return cameras anyway
+    // On some mobile browsers, labels might not be available even with permission
     return cameras;
   } catch (err) {
     console.error("Error enumerating cameras:", err);
@@ -978,55 +995,21 @@ async function getAvailableCameras() {
   }
 }
 
-async function switchCamera() {
-  if (!localStream) return;
+// Function to switch to a specific camera by deviceId
+async function switchToCamera(deviceId) {
+  if (!localStream || !deviceId) return;
   
   try {
-    // Re-enumerate cameras to ensure we have the latest list with labels
-    const cameras = await navigator.mediaDevices.enumerateDevices();
-    const videoInputs = cameras.filter(device => device.kind === 'videoinput');
-    
-    if (videoInputs.length < 2) {
-      log("📹 Only one camera available");
-      return;
-    }
-    
-    // Update available cameras list
-    availableCameras = videoInputs;
-    
-    // Get current camera ID from the active track
-    const currentTrack = localStream.getVideoTracks()[0];
-    if (!currentTrack) {
-      console.error("No current video track found");
-      return;
-    }
-    
-    const currentSettings = currentTrack.getSettings();
-    const currentCameraId = currentSettings.deviceId;
-    
-    // Find current camera index
-    const currentIndex = availableCameras.findIndex(cam => cam.deviceId === currentCameraId);
-    if (currentIndex === -1) {
-      // If current camera not found, start from 0
-      currentCameraIndex = 0;
-    } else {
-      currentCameraIndex = currentIndex;
-    }
-    
-    // Switch to next camera
-    const nextIndex = (currentCameraIndex + 1) % availableCameras.length;
-    const newCameraId = availableCameras[nextIndex].deviceId;
-    
-    log(`📹 Switching from camera ${currentCameraIndex + 1} to ${nextIndex + 1}`);
+    log(`📹 Switching to camera: ${deviceId}`);
     
     // Get new video track with selected camera
-    // On mobile, we may need to include audio to maintain permissions, but we'll only use the video track
+    // Reuse existing audio track - don't request new audio to avoid permission prompts
     const newStream = await navigator.mediaDevices.getUserMedia({
       video: { 
-        deviceId: { exact: newCameraId },
+        deviceId: { exact: deviceId },
         ...CONFIG.VIDEO
       },
-      audio: localStream ? localStream.getAudioTracks().length > 0 : false, // Include audio if we had it before (for mobile permission handling)
+      audio: false, // Don't request audio - we'll keep the existing audio track
     });
     
     const newVideoTrack = newStream.getVideoTracks()[0];
@@ -1050,7 +1033,6 @@ async function switchCamera() {
     }
     
     // Now replace track in local stream
-    // Stop old track first but don't remove yet
     const oldVideoTrack = localStream.getVideoTracks()[0];
     
     // Add new track before removing old one to prevent black screen
@@ -1073,46 +1055,127 @@ async function switchCamera() {
     });
     
     // Update current camera index
-    currentCameraIndex = nextIndex;
-    
-    log(`📹 Switched to camera: ${availableCameras[nextIndex].label || 'Camera ' + (nextIndex + 1)}`);
-  } catch (err) {
-    console.error("Error switching camera:", err);
-    
-    // On mobile, sometimes we need to request permission again
-    if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-      log("⚠️ Permission needed for camera switch - requesting access...");
-      try {
-        // Request permission again with both video and audio
-        const permissionStream = await navigator.mediaDevices.getUserMedia({
-          video: CONFIG.VIDEO,
-          audio: CONFIG.AUDIO
-        });
-        // Stop the permission stream and try switching again
-        permissionStream.getTracks().forEach(track => track.stop());
-        // Retry camera switch after a brief delay
-        setTimeout(() => switchCamera(), 300);
-        return;
-      } catch (permErr) {
-        console.error("Permission request failed:", permErr);
-        alert("Camera permission is required to switch cameras.");
-        return;
-      }
+    const cameraIndex = availableCameras.findIndex(cam => cam.deviceId === deviceId);
+    if (cameraIndex !== -1) {
+      currentCameraIndex = cameraIndex;
     }
     
-    // If switching fails, try to re-enumerate and show button if cameras are available
-    setTimeout(async () => {
-      try {
-        const cameras = await navigator.mediaDevices.enumerateDevices();
-        const videoInputs = cameras.filter(device => device.kind === 'videoinput');
-        if (videoInputs.length > 1 && btnSwitchCamera) {
-          availableCameras = videoInputs;
-          btnSwitchCamera.style.display = "block";
-        }
-      } catch (e) {
-        console.error("Error re-enumerating cameras:", e);
+    log(`📹 Switched to camera: ${availableCameras.find(cam => cam.deviceId === deviceId)?.label || 'Camera'}`);
+  } catch (err) {
+    console.error("Error switching camera:", err);
+    alert("Failed to switch camera. Please try again.");
+  }
+}
+
+// Function to show camera selection dialog
+async function showCameraSelection() {
+  if (!localStream) {
+    alert("No active video stream.");
+    return;
+  }
+  
+  try {
+    // Re-enumerate cameras to ensure we have the latest list with labels
+    const cameras = await navigator.mediaDevices.enumerateDevices();
+    const videoInputs = cameras.filter(device => device.kind === 'videoinput');
+    
+    if (videoInputs.length < 2) {
+      alert("Only one camera is available.");
+      return;
+    }
+    
+    // Update available cameras list
+    availableCameras = videoInputs;
+    
+    // Get current camera ID
+    const currentTrack = localStream.getVideoTracks()[0];
+    const currentSettings = currentTrack?.getSettings();
+    const currentCameraId = currentSettings?.deviceId;
+    
+    // Create a simple selection dialog
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    `;
+    
+    const content = document.createElement('div');
+    content.style.cssText = `
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      max-width: 90%;
+      max-height: 80%;
+      overflow-y: auto;
+    `;
+    
+    const title = document.createElement('h3');
+    title.textContent = 'Select Camera';
+    title.style.cssText = 'margin: 0 0 1rem 0; color: #333;';
+    content.appendChild(title);
+    
+    const list = document.createElement('div');
+    list.style.cssText = 'display: flex; flex-direction: column; gap: 0.5rem;';
+    
+    videoInputs.forEach((cam, index) => {
+      const button = document.createElement('button');
+      const label = cam.label || `Camera ${index + 1}`;
+      const isCurrent = cam.deviceId === currentCameraId;
+      button.textContent = label + (isCurrent ? ' (Current)' : '');
+      button.style.cssText = `
+        padding: 1rem;
+        border: 2px solid ${isCurrent ? '#667eea' : '#ddd'};
+        background: ${isCurrent ? '#f0f0ff' : 'white'};
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+        text-align: left;
+      `;
+      button.onclick = async () => {
+        document.body.removeChild(dialog);
+        await switchToCamera(cam.deviceId);
+      };
+      list.appendChild(button);
+    });
+    
+    const cancel = document.createElement('button');
+    cancel.textContent = 'Cancel';
+    cancel.style.cssText = `
+      margin-top: 1rem;
+      padding: 0.75rem 1.5rem;
+      border: 2px solid #ddd;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      width: 100%;
+    `;
+    cancel.onclick = () => {
+      document.body.removeChild(dialog);
+    };
+    
+    content.appendChild(list);
+    content.appendChild(cancel);
+    dialog.appendChild(content);
+    document.body.appendChild(dialog);
+    
+    // Close on backdrop click
+    dialog.onclick = (e) => {
+      if (e.target === dialog) {
+        document.body.removeChild(dialog);
       }
-    }, 1000);
+    };
+  } catch (err) {
+    console.error("Error showing camera selection:", err);
+    alert("Failed to load cameras. Please try again.");
   }
 }
 
@@ -1188,7 +1251,7 @@ if (btnCamera) {
 if (btnSwitchCamera) {
   btnSwitchCamera.addEventListener("click", async (e) => {
     e.stopPropagation(); // Prevent triggering other click handlers
-    await switchCamera();
+    await showCameraSelection();
   });
 }
 
