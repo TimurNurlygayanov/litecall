@@ -188,6 +188,27 @@ function initWebSocket() {
           // For host: we'll keep it visible until client joins (so they can share the link)
           // For client: it will be hidden when they connect or when room-info confirms host is active
           
+          // IMPORTANT: If we have queued signals (client received offer before stream was ready),
+          // create peer connection immediately to process them
+          const peerIsValid = isPeerValid(peer);
+          if (queuedIncomingSignals.length > 0 && !peerIsValid) {
+            log(`⚡ Stream ready with ${queuedIncomingSignals.length} queued signals - creating peer immediately...`);
+            if (peer && peer.destroyed) {
+              peer = null; // Clean up destroyed peer reference
+            }
+            createPeerConnection(stream);
+          } else if (isHost && !peerIsValid) {
+            // For host, create peer connection when stream is ready (will generate offer)
+            // This is a fallback in case room-info hasn't arrived yet
+            log("⚡ Host stream ready - creating peer connection...");
+            if (peer && peer.destroyed) {
+              peer = null; // Clean up destroyed peer reference
+            }
+            createPeerConnection(stream);
+          } else if (peerIsValid) {
+            log("✅ Peer already exists and is valid, stream ready");
+          }
+          
           // Clear any existing timeout
           if (cameraEnumTimeout) {
             clearTimeout(cameraEnumTimeout);
