@@ -69,6 +69,7 @@ console.log(`📊 Initial call count loaded: ${callCount}`);
 
 const connections = {}; // roomId -> [clients]
 const lastSignals = {}; // roomId -> last offer/answer
+const hosts = {}; // roomId -> first client WebSocket (the host)
 
 
 // Отдаём статические файлы из public/
@@ -119,6 +120,13 @@ wss.on("connection", (ws, req) => {
 
   if (!connections[roomId]) connections[roomId] = [];
   const isFirst = connections[roomId].length === 0;
+  
+  // Track the first client (host) for this room
+  if (isFirst) {
+    hosts[roomId] = ws;
+    console.log(`👑 Host assigned for room "${roomId}"`);
+  }
+  
   connections[roomId].push(ws);
 
   console.log(`👥 Client joined room "${roomId}" (${connections[roomId].length} total)`);
@@ -145,17 +153,20 @@ wss.on("connection", (ws, req) => {
   // Also notify existing clients that a new client joined (for reconnection handling)
   if (roomClients.length > 1) {
     console.log(`📢 Notifying ${roomClients.length - 1} existing clients about new connection`);
+    const hostWs = hosts[roomId]; // Get the host WebSocket for this room
     roomClients.forEach(client => {
       if (client !== ws && client.readyState === 1) {
         try {
-          // Send updated room info to existing clients
+          // Check if this client is the host - preserve their role
+          const isClientHost = (hostWs === client);
           client.send(JSON.stringify({
             type: "room-info",
             roomId: roomId,
-            isFirst: false, // Existing clients are not first
+            isFirst: isClientHost, // Preserve host role - host stays host, others stay clients
             totalClients: roomClients.length,
             newClientJoined: true // Flag to indicate a new client just joined
           }));
+          console.log(`📤 Notified ${isClientHost ? 'host' : 'client'} about new connection`);
         } catch (err) {
           console.error("❌ Error notifying existing client:", err);
         }
@@ -229,6 +240,18 @@ wss.on("connection", (ws, req) => {
     if (connections[roomId].length === 0) {
       delete connections[roomId];
       delete lastSignals[roomId];
+      delete hosts[roomId]; // Clean up host tracking when room is empty
+    } else {
+      // If the host disconnected, we need to reassign a new host (the first remaining client)
+      if (hosts[roomId] === ws) {
+        const remainingClients = connections[roomId];
+        if (remainingClients.length > 0) {
+          hosts[roomId] = remainingClients[0]; // First remaining client becomes host
+          console.log(`👑 Host reassigned for room "${roomId}" (original host disconnected)`);
+        } else {
+          delete hosts[roomId];
+        }
+      }
     }
     console.log(`❌ Client left room "${roomId}"`);
   });

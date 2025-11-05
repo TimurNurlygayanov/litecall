@@ -208,8 +208,29 @@ function initWebSocket() {
       // Handle room-info message from server
       if (data.type === "room-info") {
         const wasHost = isHost;
-        isHost = data.isFirst;
         const newClientJoined = data.newClientJoined || false;
+        
+        // IMPORTANT: Only update role if this is NOT a new-client-joined notification
+        // During reconnection notifications, preserve the existing role to prevent host->client flip
+        if (!newClientJoined) {
+          // Initial connection - accept role from server
+          isHost = data.isFirst;
+        } else {
+          // Reconnection notification - preserve existing role (server should send correct role, but be defensive)
+          // Only update if server says we should be host and we currently aren't (in case host was reassigned)
+          if (data.isFirst && !wasHost) {
+            log(`🔄 Server indicates role change to Host - accepting`);
+            isHost = true;
+          } else if (!data.isFirst && wasHost) {
+            // Server says we're not host, but we think we are - preserve our role (defensive)
+            log(`🔒 Preserving Host role - server says isFirst=${data.isFirst} but we are host`);
+            isHost = true;
+          } else {
+            // Role matches or no change needed
+            log(`🔒 Preserving existing role (${wasHost ? "Host" : "Client"}) during new client notification`);
+          }
+        }
+        
         log(`📋 Room info: isFirst=${data.isFirst}, totalClients=${data.totalClients}, newClientJoined=${newClientJoined}`);
         log(`👤 Role: ${isHost ? "Host" : "Client"} (was ${wasHost ? "Host" : "Client"})`);
         
