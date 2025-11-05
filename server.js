@@ -73,11 +73,12 @@ wss.on("connection", (ws, req) => {
 
   // Пересылаем сигналы между участниками
   ws.on("message", (msg) => {
-    for (const client of connections[roomId]) {
-      if (client !== ws && client.readyState === 1) {
-        client.send(msg);
+      const messageText = typeof msg === "string" ? msg : msg.toString();
+      for (const client of connections[roomId]) {
+        if (client !== ws && client.readyState === 1) {
+          client.send(messageText);
+        }
       }
-    }
   });
 
   // Когда клиент отключается
