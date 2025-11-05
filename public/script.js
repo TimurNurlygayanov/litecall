@@ -170,3 +170,36 @@ document.body.addEventListener("click", async () => {
     }
   } catch (e) {}
 });
+
+
+// ====== Controls ======
+const btnMute = document.getElementById("btn-mute");
+const btnCamera = document.getElementById("btn-camera");
+const btnLeave = document.getElementById("btn-leave");
+
+let isMuted = false;
+let isCameraOff = false;
+
+btnMute.addEventListener("click", () => {
+  if (!localStream) return;
+  isMuted = !isMuted;
+  localStream.getAudioTracks().forEach(track => (track.enabled = !isMuted));
+  btnMute.textContent = isMuted ? "🔇" : "🎤";
+  console.log(isMuted ? "🔇 Mic muted" : "🎤 Mic unmuted");
+});
+
+btnCamera.addEventListener("click", () => {
+  if (!localStream) return;
+  isCameraOff = !isCameraOff;
+  localStream.getVideoTracks().forEach(track => (track.enabled = !isCameraOff));
+  btnCamera.textContent = isCameraOff ? "📷" : "🎥";
+  console.log(isCameraOff ? "📷 Camera off" : "🎥 Camera on");
+});
+
+btnLeave.addEventListener("click", () => {
+  console.log("👋 Disconnecting...");
+  if (peer) peer.destroy();
+  if (ws && ws.readyState === WebSocket.OPEN) ws.close();
+  window.close(); // закрывает вкладку, если разрешено
+  setTimeout(() => (location.href = "/"), 500); // fallback
+});
