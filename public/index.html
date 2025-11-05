@@ -64,8 +64,12 @@
     }
 
     .page-1 {
-      background: #667eea;
-      color: #fff;
+      background: #0a0e27;
+      background-image: 
+        linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      color: #e0e7ff;
       position: relative;
       overflow: hidden;
     }
@@ -77,9 +81,15 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+      background: radial-gradient(
+        circle 800px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(0, 255, 255, 0.15) 0%,
+        rgba(138, 43, 226, 0.1) 30%,
+        transparent 70%
+      );
       pointer-events: none;
       z-index: 1;
+      transition: background 0.4s ease-out;
     }
     
     .page-1::after {
@@ -89,32 +99,15 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(
-        90deg,
-        var(--wave-color1, #667eea) 0%,
-        var(--wave-color2, #764ba2) 25%,
-        var(--wave-color1, #667eea) 50%,
-        var(--wave-color2, #764ba2) 75%,
-        var(--wave-color1, #667eea) 100%
+      background: radial-gradient(
+        circle 400px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(255, 0, 255, 0.08) 0%,
+        transparent 50%
       );
-      background-size: 200% 100%;
-      animation: wave 8s ease-in-out infinite;
       pointer-events: none;
-      z-index: 0;
-      opacity: 0.8;
-      transition: background 10s ease-in-out;
-    }
-    
-    @keyframes wave {
-      0% {
-        background-position: 0% 50%;
-      }
-      50% {
-        background-position: 100% 50%;
-      }
-      100% {
-        background-position: 0% 50%;
-      }
+      z-index: 1;
+      transition: background 0.4s ease-out;
+      opacity: 0.6;
     }
     
     .page-1 > * {
@@ -123,13 +116,107 @@
     }
 
     .page-2 {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #fff;
+      background: #0a0e27;
+      background-image: 
+        linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      color: #e0e7ff;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .page-2::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(
+        circle 800px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(0, 255, 255, 0.15) 0%,
+        rgba(138, 43, 226, 0.1) 30%,
+        transparent 70%
+      );
+      pointer-events: none;
+      z-index: 1;
+      transition: background 0.4s ease-out;
+    }
+    
+    .page-2::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(
+        circle 400px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(255, 0, 255, 0.08) 0%,
+        transparent 50%
+      );
+      pointer-events: none;
+      z-index: 1;
+      transition: background 0.4s ease-out;
+      opacity: 0.6;
+    }
+    
+    .page-2 > * {
+      position: relative;
+      z-index: 2;
     }
 
     .page-3 {
-      background: #f8f9fa;
-      color: #333;
+      background: #0a0e27;
+      background-image: 
+        linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      color: #e0e7ff;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .page-3::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(
+        circle 800px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(0, 255, 255, 0.15) 0%,
+        rgba(138, 43, 226, 0.1) 30%,
+        transparent 70%
+      );
+      pointer-events: none;
+      z-index: 1;
+      transition: background 0.4s ease-out;
+    }
+    
+    .page-3::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(
+        circle 400px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(255, 0, 255, 0.08) 0%,
+        transparent 50%
+      );
+      pointer-events: none;
+      z-index: 1;
+      transition: background 0.4s ease-out;
+      opacity: 0.6;
+    }
+    
+    .page-3 > * {
+      position: relative;
+      z-index: 2;
     }
 
     h1 {
@@ -142,38 +229,53 @@
     }
     
     .page-1 h1 {
-      color: #fff;
+      color: #00ffff;
       margin-bottom: 1rem;
-      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+      text-shadow: 
+        0 0 10px rgba(0, 255, 255, 0.5),
+        0 0 20px rgba(0, 255, 255, 0.3),
+        0 0 30px rgba(0, 255, 255, 0.2);
+      letter-spacing: 0.05em;
     }
     
     .page-1 .subtitle {
       font-size: clamp(1rem, 2.5vw, 1.25rem);
       text-align: center;
-      color: rgba(255, 255, 255, 0.9);
+      color: #b8bfff;
       margin-bottom: 3rem;
       font-weight: 300;
       max-width: 600px;
+      text-shadow: 0 0 8px rgba(184, 191, 255, 0.3);
     }
 
     button {
       padding: 1.1em 2.5em;
       font-size: 1.1rem;
       font-weight: 600;
-      border: none;
-      border-radius: 12px;
-      background: #fff;
-      color: #667eea;
+      border: 2px solid #00ffff;
+      border-radius: 8px;
+      background: transparent;
+      color: #00ffff;
       cursor: pointer;
       transition: all 0.3s ease;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-      letter-spacing: 0.02em;
+      box-shadow: 
+        0 0 10px rgba(0, 255, 255, 0.3),
+        inset 0 0 10px rgba(0, 255, 255, 0.1);
+      letter-spacing: 0.05em;
+      text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
     }
 
     button:hover {
       transform: translateY(-3px);
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-      background: #f8f9fa;
+      box-shadow: 
+        0 0 20px rgba(0, 255, 255, 0.6),
+        0 0 40px rgba(0, 255, 255, 0.4),
+        inset 0 0 20px rgba(0, 255, 255, 0.2);
+      background: rgba(0, 255, 255, 0.1);
+      border-color: #ff00ff;
+      text-shadow: 
+        0 0 10px rgba(0, 255, 255, 0.8),
+        0 0 15px rgba(255, 0, 255, 0.5);
     }
 
     button:active {
@@ -183,8 +285,9 @@
     #counter {
       margin-top: 2rem;
       font-size: 0.95rem;
-      color: rgba(255, 255, 255, 0.85);
+      color: #8a8aff;
       font-weight: 300;
+      text-shadow: 0 0 6px rgba(138, 138, 255, 0.4);
     }
 
     .features {
@@ -203,11 +306,17 @@
     }
     
     .page-2 .features h2 {
-      color: #fff;
+      color: #00ffff;
+      text-shadow: 
+        0 0 10px rgba(0, 255, 255, 0.4),
+        0 0 20px rgba(0, 255, 255, 0.2);
     }
     
     .page-3 .features h2 {
-      color: #333;
+      color: #00ffff;
+      text-shadow: 
+        0 0 10px rgba(0, 255, 255, 0.4),
+        0 0 20px rgba(0, 255, 255, 0.2);
     }
 
     .features-list {
@@ -220,7 +329,8 @@
       margin: 1.25rem 0;
       padding-left: 2.5rem;
       position: relative;
-      color: rgba(255, 255, 255, 0.95);
+      color: #e0e7ff;
+      text-shadow: 0 0 4px rgba(224, 231, 255, 0.2);
     }
 
     .features-list li::before {
@@ -228,21 +338,27 @@
       position: absolute;
       left: 0;
       top: 0;
-      color: #00bfa6;
+      color: #00ffff;
       font-size: 1.5rem;
       font-weight: bold;
       line-height: 1.8;
-      transform: translateY(0.1em);
+      height: 1.8em;
+      display: flex;
+      align-items: center;
+      text-shadow: 
+        0 0 8px rgba(0, 255, 255, 0.8),
+        0 0 16px rgba(0, 255, 255, 0.4);
     }
 
     .features-list li:last-child {
       margin-top: 2.5rem;
       padding-top: 2rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      border-top: 1px solid rgba(0, 255, 255, 0.3);
       font-size: 1.25rem;
       font-weight: 500;
-      color: #fff;
+      color: #b8bfff;
       line-height: 1.6;
+      box-shadow: 0 -1px 0 rgba(0, 255, 255, 0.1);
     }
 
     .features-list li:last-child::before {
@@ -262,32 +378,30 @@
     }
     
     .page-2 .footer {
-      border-top: 1px solid rgba(255, 255, 255, 0.2);
-      color: rgba(255, 255, 255, 0.9);
+      border-top: 1px solid rgba(0, 255, 255, 0.3);
+      color: #b8bfff;
+      box-shadow: 0 -1px 0 rgba(0, 255, 255, 0.1);
     }
     
     .page-3 .footer {
-      border-top: 1px solid rgba(0, 0, 0, 0.1);
-      color: #333;
+      border-top: 1px solid rgba(0, 255, 255, 0.3);
+      color: #b8bfff;
+      box-shadow: 0 -1px 0 rgba(0, 255, 255, 0.1);
     }
 
     .footer a {
-      color: #00bfa6;
+      color: #00ffff;
       text-decoration: none;
-      transition: opacity 0.2s ease;
+      transition: all 0.2s ease;
+      text-shadow: 0 0 6px rgba(0, 255, 255, 0.4);
     }
 
     .footer a:hover {
-      opacity: 0.8;
+      color: #ff00ff;
+      text-shadow: 
+        0 0 10px rgba(255, 0, 255, 0.6),
+        0 0 15px rgba(255, 0, 255, 0.4);
       text-decoration: underline;
-    }
-    
-    .page-3 .footer a {
-      color: #0066cc;
-    }
-    
-    .page-3 .footer a:hover {
-      color: #0052a3;
     }
 
     .scroll-indicator {
@@ -303,7 +417,8 @@
     }
     
     .page-1 .scroll-indicator {
-      color: rgba(255, 255, 255, 0.9);
+      color: #8a8aff;
+      text-shadow: 0 0 6px rgba(138, 138, 255, 0.4);
     }
 
     @keyframes bounce {
@@ -410,44 +525,29 @@
     // Update counter once on page load (no need to keep updating)
     updateCounter();
 
-    // Wave effect - dynamically update gradient colors for variation
-    function updateWaveColors() {
-      const page1 = document.querySelector('.page-1');
-      if (!page1) return;
-
-      // Base purple colors
-      const baseColor1 = { r: 102, g: 126, b: 234 }; // #667eea
-      const baseColor2 = { r: 118, g: 75, b: 162 };  // #764ba2
-
-      // Generate slight variations
-      const toHex = (c) => c.toString(16).padStart(2, '0');
+    // Mouse-reactive background effect for all pages (cyberpunk style)
+    function setupMouseReactiveBackground(pageElement) {
+      if (!pageElement) return;
       
-      const variation1 = {
-        r: Math.max(80, Math.min(255, baseColor1.r + Math.floor(Math.random() * 40 - 20))),
-        g: Math.max(100, Math.min(255, baseColor1.g + Math.floor(Math.random() * 40 - 20))),
-        b: Math.max(200, Math.min(255, baseColor1.b + Math.floor(Math.random() * 40 - 20)))
-      };
+      pageElement.addEventListener('mousemove', (e) => {
+        const rect = pageElement.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        pageElement.style.setProperty('--mouse-x', `${x}%`);
+        pageElement.style.setProperty('--mouse-y', `${y}%`);
+      });
       
-      const variation2 = {
-        r: Math.max(100, Math.min(255, baseColor2.r + Math.floor(Math.random() * 40 - 20))),
-        g: Math.max(50, Math.min(255, baseColor2.g + Math.floor(Math.random() * 40 - 20))),
-        b: Math.max(120, Math.min(255, baseColor2.b + Math.floor(Math.random() * 40 - 20)))
-      };
-
-      const color1 = `#${toHex(variation1.r)}${toHex(variation1.g)}${toHex(variation1.b)}`;
-      const color2 = `#${toHex(variation2.r)}${toHex(variation2.g)}${toHex(variation2.b)}`;
-
-      // Update the wave gradient
-      const waveElement = page1;
-      if (waveElement) {
-        waveElement.style.setProperty('--wave-color1', color1);
-        waveElement.style.setProperty('--wave-color2', color2);
-      }
+      // Reset to center when mouse leaves
+      pageElement.addEventListener('mouseleave', () => {
+        pageElement.style.setProperty('--mouse-x', '50%');
+        pageElement.style.setProperty('--mouse-y', '50%');
+      });
     }
-
-    // Update wave colors periodically for more dynamic effect
-    updateWaveColors();
-    setInterval(updateWaveColors, 10000);
+    
+    // Apply to all pages
+    setupMouseReactiveBackground(document.querySelector('.page-1'));
+    setupMouseReactiveBackground(document.querySelector('.page-2'));
+    setupMouseReactiveBackground(document.querySelector('.page-3'));
 
     // Hide scroll indicator when user scrolls
     let scrollIndicator = document.querySelector('.scroll-indicator');
