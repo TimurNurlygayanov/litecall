@@ -231,14 +231,26 @@
 
       #controls {
         bottom: 2rem;
-        gap: 16px;
+        gap: 12px; /* Reduced gap for mobile */
         z-index: 20; /* Ensure controls are on top */
+        padding: 0 1rem; /* Add padding to prevent buttons from touching edges */
       }
 
       #controls button {
-        width: 72px;
-        height: 72px;
-        font-size: 32px;
+        width: 56px; /* Smaller buttons on mobile */
+        height: 56px;
+        font-size: 24px;
+      }
+      
+      #controls button img {
+        width: 24px; /* Smaller icons */
+        height: 24px;
+      }
+      
+      /* Keep mic-off icon 2x bigger even on mobile */
+      #controls button img[src*="mic-off"] {
+        width: 48px;
+        height: 48px;
       }
       
       /* Adjust local video position to be above controls */
@@ -264,16 +276,32 @@
     }
 
     @media (max-width: 480px) {
+      #controls {
+        gap: 10px; /* Even smaller gap on very small screens */
+        padding: 0 0.5rem;
+      }
+      
       #controls button {
-        width: 80px;
-        height: 80px;
-        font-size: 36px;
+        width: 52px; /* Smaller buttons on very small screens */
+        height: 52px;
+        font-size: 22px;
+      }
+      
+      #controls button img {
+        width: 22px;
+        height: 22px;
+      }
+      
+      /* Keep mic-off icon 2x bigger even on small screens */
+      #controls button img[src*="mic-off"] {
+        width: 44px;
+        height: 44px;
       }
 
       #local {
         width: 40vw;
         height: 22vh;
-        bottom: 170px; /* Move higher on smaller screens (controls are larger: 80px + 32px = 112px) */
+        bottom: 140px; /* Adjusted for smaller controls */
       }
     }
   </style>

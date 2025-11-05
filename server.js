@@ -103,12 +103,17 @@ const server = app.listen(PORT, () =>
 // Создаём WebSocket-сервер на базе HTTP
 const wss = new WebSocketServer({ server });
 
+// Validate room ID pattern (alphanumeric, 1-20 chars)
+const ROOM_ID_PATTERN = /^[a-z0-9]{1,20}$/i;
+
 wss.on("connection", (ws, req) => {
   const parsedUrl = url.parse(req.url, true);
   const roomId = parsedUrl.query.room;
 
-  if (!roomId) {
-    ws.close();
+  // Validate room ID
+  if (!roomId || !ROOM_ID_PATTERN.test(roomId)) {
+    console.warn(`❌ Invalid room ID: ${roomId}`);
+    ws.close(1008, "Invalid room ID");
     return;
   }
 
@@ -140,14 +145,28 @@ wss.on("connection", (ws, req) => {
   }
 
   ws.on("message", (msg) => {
+    try {
       // Always convert to string explicitly
       const messageText = Buffer.isBuffer(msg) ? msg.toString() : msg.toString();
+      
+      // Limit message size (prevent abuse)
+      if (messageText.length > 10000) {
+        console.warn(`❌ Message too large from room ${roomId}: ${messageText.length} bytes`);
+        ws.close(1009, "Message too large");
+        return;
+      }
 
       let parsed;
       try {
         parsed = JSON.parse(messageText);
       } catch (err) {
-        console.error("❌ Invalid JSON in message:", err, messageText);
+        console.error("❌ Invalid JSON in message:", err);
+        return;
+      }
+
+      // Validate message structure
+      if (!parsed || typeof parsed !== "object") {
+        console.warn("❌ Invalid message structure");
         return;
       }
 
@@ -157,12 +176,25 @@ wss.on("connection", (ws, req) => {
       }
 
       // Relay to other peers
-      for (const client of connections[roomId]) {
+      const roomClients = connections[roomId];
+      if (!roomClients) {
+        console.warn(`❌ Room ${roomId} no longer exists`);
+        return;
+      }
+
+      for (const client of roomClients) {
         if (client !== ws && client.readyState === 1) {
-          client.send(JSON.stringify(parsed)); // ✅ always send as string
+          try {
+            client.send(JSON.stringify(parsed)); // ✅ always send as string
+          } catch (err) {
+            console.error("❌ Error sending message to client:", err);
+          }
         }
       }
-    });
+    } catch (err) {
+      console.error("❌ Error processing message:", err);
+    }
+  });
 
   ws.on("close", () => {
     connections[roomId] = connections[roomId].filter((c) => c !== ws);
