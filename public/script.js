@@ -150,10 +150,21 @@ function initPeer() {
           autoGainControl: true,
         },
       })
-      .then((stream) => {
+      .then(async (stream) => {
         localStream = stream;
         localVideo.srcObject = stream;
         console.log("🎥 Local stream ready, creating peer connection...");
+        
+        // Enumerate available cameras after getting permission (required for labels)
+        // Wait a bit for permissions to propagate
+        setTimeout(async () => {
+          availableCameras = await getAvailableCameras();
+          if (availableCameras.length > 1 && btnSwitchCamera) {
+            btnSwitchCamera.style.display = "block";
+            console.log(`📹 Found ${availableCameras.length} cameras`);
+          }
+        }, 500);
+        
         createPeerConnection(stream);
       })
       .catch((err) => {
@@ -293,7 +304,8 @@ if (meetingLinkInput) {
 }
 
 if (copyLinkBtn && meetingLinkInput) {
-  copyLinkBtn.addEventListener("click", async () => {
+  copyLinkBtn.addEventListener("click", async (e) => {
+    e.stopPropagation(); // Prevent triggering fullscreen
     try {
       await navigator.clipboard.writeText(meetingLinkInput.value);
       copyLinkBtn.textContent = "Copied!";
@@ -314,27 +326,84 @@ if (copyLinkBtn && meetingLinkInput) {
       }, 2000);
     }
   });
+  
+  // Also prevent fullscreen on input click
+  meetingLinkInput.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+}
+
+// ====== Camera Management ======
+let availableCameras = [];
+let currentCameraIndex = 0;
+
+async function getAvailableCameras() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices.filter(device => device.kind === 'videoinput');
+  } catch (err) {
+    console.error("Error enumerating cameras:", err);
+    return [];
+  }
+}
+
+async function switchCamera() {
+  if (!localStream || availableCameras.length < 2) return;
+  
+  try {
+    // Switch to next camera
+    currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
+    const newCameraId = availableCameras[currentCameraIndex].deviceId;
+    
+    // Get new stream with selected camera
+    const newStream = await navigator.mediaDevices.getUserMedia({
+      video: { 
+        deviceId: { exact: newCameraId },
+        width: { ideal: 1280 }, 
+        height: { ideal: 720 } 
+      },
+      audio: false, // Keep existing audio track
+    });
+    
+    // Replace video track in the existing stream
+    const newVideoTrack = newStream.getVideoTracks()[0];
+    const oldVideoTrack = localStream.getVideoTracks()[0];
+    
+    // Use replaceTrack to update the peer connection
+    if (peer && peer._pc) {
+      const sender = peer._pc.getSenders().find(s => 
+        s.track && s.track.kind === 'video'
+      );
+      if (sender) {
+        await sender.replaceTrack(newVideoTrack);
+      }
+    }
+    
+    // Replace track in local stream
+    localStream.removeTrack(oldVideoTrack);
+    localStream.addTrack(newVideoTrack);
+    oldVideoTrack.stop();
+    
+    // Stop the temporary stream (we only needed the track)
+    newStream.getVideoTracks().forEach(track => {
+      if (track !== newVideoTrack) track.stop();
+    });
+    
+    console.log(`📹 Switched to camera: ${availableCameras[currentCameraIndex].label || 'Camera ' + (currentCameraIndex + 1)}`);
+  } catch (err) {
+    console.error("Error switching camera:", err);
+  }
 }
 
 // ====== Start ======
 initWebSocket();
 
-// ====== Fullscreen & Wake Lock ======
-document.body.addEventListener("click", async () => {
-  try {
-    if (document.fullscreenEnabled && !document.fullscreenElement) {
-      await document.body.requestFullscreen();
-    }
-    if ("wakeLock" in navigator) {
-      await navigator.wakeLock.request("screen");
-    }
-  } catch (e) {}
-});
-
 
 // ====== Controls ======
 const btnMute = document.getElementById("btn-mute");
 const btnCamera = document.getElementById("btn-camera");
+const btnSwitchCamera = document.getElementById("btn-switch-camera");
+const btnFullscreen = document.getElementById("btn-fullscreen");
 const btnLeave = document.getElementById("btn-leave");
 
 let isMuted = false;
@@ -344,7 +413,10 @@ btnMute.addEventListener("click", () => {
   if (!localStream) return;
   isMuted = !isMuted;
   localStream.getAudioTracks().forEach(track => (track.enabled = !isMuted));
-  btnMute.textContent = isMuted ? "🔇" : "🎤";
+  const micIcon = document.getElementById("mic-icon");
+  if (micIcon) {
+    micIcon.src = isMuted ? "/images/mic-off.svg" : "/images/mic-on.svg";
+  }
   console.log(isMuted ? "🔇 Mic muted" : "🎤 Mic unmuted");
 });
 
@@ -352,8 +424,47 @@ btnCamera.addEventListener("click", () => {
   if (!localStream) return;
   isCameraOff = !isCameraOff;
   localStream.getVideoTracks().forEach(track => (track.enabled = !isCameraOff));
-  btnCamera.textContent = isCameraOff ? "📷" : "🎥";
+  const cameraIcon = document.getElementById("camera-icon");
+  if (cameraIcon) {
+    cameraIcon.src = isCameraOff ? "/images/camera-off.svg" : "/images/camera-on.png";
+  }
   console.log(isCameraOff ? "📷 Camera off" : "🎥 Camera on");
+});
+
+btnSwitchCamera.addEventListener("click", async (e) => {
+  e.stopPropagation(); // Prevent triggering other click handlers
+  await switchCamera();
+});
+
+btnFullscreen.addEventListener("click", async (e) => {
+  e.stopPropagation();
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      btnFullscreen.textContent = "⛶";
+    } else {
+      await document.body.requestFullscreen();
+      btnFullscreen.textContent = "⛶";
+      // Update button text when fullscreen changes
+      document.addEventListener("fullscreenchange", () => {
+        if (document.fullscreenElement) {
+          btnFullscreen.textContent = "⛶";
+        } else {
+          btnFullscreen.textContent = "⛶";
+        }
+      });
+    }
+    // Request wake lock when entering fullscreen
+    if ("wakeLock" in navigator && !document.fullscreenElement) {
+      try {
+        await navigator.wakeLock.request("screen");
+      } catch (err) {
+        // Wake lock might not be available
+      }
+    }
+  } catch (err) {
+    console.error("Fullscreen error:", err);
+  }
 });
 
 btnLeave.addEventListener("click", () => {

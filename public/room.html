@@ -139,6 +139,13 @@
       border-color: #00bfa6;
     }
 
+    /* Prevent fullscreen on copy button click */
+    .copy-btn,
+    .link-input,
+    .link-widget {
+      pointer-events: auto;
+    }
+
     /* Controls */
     #controls {
       position: absolute;
@@ -162,6 +169,24 @@
       backdrop-filter: blur(20px);
       transition: all 0.2s ease;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    #controls button img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+      transition: opacity 0.2s ease;
+    }
+
+    /* Special handling for PNG images (camera-on.png) */
+    #controls button img[src*=".png"] {
+      filter: none;
+      opacity: 0.9;
     }
 
     #controls button:hover {
@@ -247,9 +272,17 @@
 
   <!-- Controls -->
   <div id="controls">
-    <button id="btn-mute" title="Mute / Unmute">🎤</button>
-    <button id="btn-camera" title="Toggle Camera">🎥</button>
-    <button id="btn-leave" title="Disconnect">❌</button>
+    <button id="btn-mute" title="Mute / Unmute">
+      <img src="/images/mic-on.svg" alt="Mic" id="mic-icon" />
+    </button>
+    <button id="btn-camera" title="Toggle Camera">
+      <img src="/images/camera-on.png" alt="Camera" id="camera-icon" />
+    </button>
+    <button id="btn-switch-camera" title="Switch Camera" style="display: none;">🔄</button>
+    <button id="btn-fullscreen" title="Fullscreen">⛶</button>
+    <button id="btn-leave" title="Disconnect">
+      <img src="/images/end-call-icon.svg" alt="End Call" id="leave-icon" />
+    </button>
   </div>
 
   <script src="https://unpkg.com/simple-peer/simplepeer.min.js"></script>
