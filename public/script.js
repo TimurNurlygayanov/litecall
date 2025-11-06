@@ -832,8 +832,17 @@ function createPeerConnection(stream) {
       // Log signal type only, not full content (makes logs easier to copy)
       if (data.type === "offer" || data.type === "answer") {
         log(`📤 Sending signal: ${data.type} (SDP length: ${data.sdp?.length || 0} chars)`);
+        // Log ICE candidates in SDP for debugging
+        if (data.sdp) {
+          const candidateCount = (data.sdp.match(/a=candidate:/g) || []).length;
+          log(`📤 SDP contains ${candidateCount} ICE candidates`);
+        }
       } else if (data.type === "candidate") {
-        log(`📤 Sending signal: candidate (${data.candidate?.candidate?.substring(0, 50) || 'unknown'}...)`);
+        const candidateStr = data.candidate?.candidate || '';
+        const candidateType = candidateStr.includes('typ host') ? 'host' : 
+                             candidateStr.includes('typ srflx') ? 'srflx' :
+                             candidateStr.includes('typ relay') ? 'relay' : 'unknown';
+        log(`📤 Sending signal: candidate (${candidateType}, ${candidateStr.substring(0, 50)}...)`);
       } else {
         log(`📤 Sending signal: ${data.type || 'unknown'}`);
       }
@@ -998,6 +1007,31 @@ function createPeerConnection(stream) {
           tryPlay();
         }
       }, 2000);
+      
+      // Final fallback - try playing after even longer delay (for slow connections)
+      // Also check if ICE connection is established and force play if needed
+      setTimeout(() => {
+        if (!remoteVideo.paused) {
+          log("✅ Video is already playing");
+        } else {
+          // Check ICE connection state - if it's connected/completed, force play
+          if (peer && peer._pc) {
+            const iceState = peer._pc.iceConnectionState;
+            log(`🔄 Final fallback: ICE state is ${iceState}, attempting to play video`);
+            if (iceState === "connected" || iceState === "completed" || iceState === "checking") {
+              log("🎬 ICE connection active - forcing video play");
+              tryPlay();
+            } else {
+              // Even if ICE isn't connected, try playing - sometimes it works
+              log("🎬 Attempting to play video despite ICE state: " + iceState);
+              tryPlay();
+            }
+          } else {
+            log("🔄 Final fallback: attempting to play video (no peer connection info)");
+            tryPlay();
+          }
+        }
+      }, 5000);
     }
     
     // Listen for when video actually starts playing to ensure smooth transition
@@ -1147,15 +1181,50 @@ function createPeerConnection(stream) {
 
   peer.on("iceStateChange", (state) => {
     log("🧊 ICE state:", state);
+    // Log ICE gathering state for debugging
+    if (peer && peer._pc) {
+      const iceGatheringState = peer._pc.iceGatheringState;
+      const iceConnectionState = peer._pc.iceConnectionState;
+      const connectionState = peer._pc.connectionState;
+      log(`🧊 ICE gathering: ${iceGatheringState}, connection: ${iceConnectionState}, peer: ${connectionState}`);
+    }
   });
   
   peer.on("iceConnectionStateChange", (state) => {
     log("🧊 ICE conn:", state);
     
+    // Log additional connection details for debugging
+    if (peer && peer._pc) {
+      const iceGatheringState = peer._pc.iceGatheringState;
+      const connectionState = peer._pc.connectionState;
+      const localDescription = peer._pc.localDescription;
+      const remoteDescription = peer._pc.remoteDescription;
+      log(`🧊 ICE details - gathering: ${iceGatheringState}, peer connection: ${connectionState}`);
+      log(`🧊 SDP - local: ${localDescription ? localDescription.type : 'none'}, remote: ${remoteDescription ? remoteDescription.type : 'none'}`);
+      
+      // Log ICE candidates count
+      if (peer._pc.localDescription) {
+        const localCandidates = peer._pc.localDescription.sdp.match(/a=candidate:/g) || [];
+        log(`🧊 Local ICE candidates: ${localCandidates.length}`);
+      }
+      if (peer._pc.remoteDescription) {
+        const remoteCandidates = peer._pc.remoteDescription.sdp.match(/a=candidate:/g) || [];
+        log(`🧊 Remote ICE candidates: ${remoteCandidates.length}`);
+      }
+    }
+    
     // Handle successful connection
     if (state === "connected" || state === "completed") {
       hasConnected = true;
       log("✅ ICE connection established!");
+      
+      // Try to play remote video once ICE is connected (if it exists but isn't playing)
+      if (remoteVideo && remoteVideo.srcObject && remoteVideo.paused) {
+        log("🎬 ICE connected - attempting to play remote video");
+        remoteVideo.play().catch((err) => {
+          logWarn("⚠️ Failed to play video after ICE connection:", err);
+        });
+      }
       return;
     }
     
@@ -1172,6 +1241,13 @@ function createPeerConnection(stream) {
       const hasRemoteStream = remoteVideo && remoteVideo.srcObject;
       if (hasRemoteStream) {
         log("⚠️ ICE disconnected but remote stream exists - connection may still work");
+        // Try to play video even if ICE is disconnected - sometimes it works
+        if (remoteVideo.paused) {
+          log("🎬 Attempting to play video despite ICE disconnected state");
+          remoteVideo.play().catch((err) => {
+            logWarn("⚠️ Failed to play video (ICE disconnected):", err?.name, err?.message);
+          });
+        }
       } else {
         log("⚠️ ICE disconnected (may recover)...");
       }
