@@ -829,7 +829,14 @@ function createPeerConnection(stream) {
   // Set up ALL event handlers FIRST, before adding stream or processing signals
   peer.on("signal", (data) => {
       const msg = JSON.stringify(data);
-      log("📤 Sending signal:", data.type, data);
+      // Log signal type only, not full content (makes logs easier to copy)
+      if (data.type === "offer" || data.type === "answer") {
+        log(`📤 Sending signal: ${data.type} (SDP length: ${data.sdp?.length || 0} chars)`);
+      } else if (data.type === "candidate") {
+        log(`📤 Sending signal: candidate (${data.candidate?.candidate?.substring(0, 50) || 'unknown'}...)`);
+      } else {
+        log(`📤 Sending signal: ${data.type || 'unknown'}`);
+      }
       safeSend(msg);
   });
 
@@ -847,14 +854,24 @@ function createPeerConnection(stream) {
       controls.style.visibility = "visible";
     }
     
+    // On mobile, ensure video element has proper attributes BEFORE setting stream
+    remoteVideo.setAttribute("playsinline", "true");
+    remoteVideo.setAttribute("webkit-playsinline", "true");
+    remoteVideo.setAttribute("autoplay", "true");
+    
+    // Set stream
     remoteVideo.srcObject = stream;
+    log("📹 Remote stream set to video element");
     
     // On mobile, videos need to be muted initially to autoplay (browser autoplay policy)
     // Start muted to ensure autoplay works
     remoteVideo.muted = true;
+    log("🔇 Remote video muted for autoplay");
     
     // Show video element immediately
     remoteVideo.classList.add("playing");
+    remoteVideo.style.display = "block";
+    log("👁️ Remote video element made visible");
     
     // Hide waiting screen when remote stream is received (client has joined)
     if (waitingScreen && !waitingScreen.classList.contains("hidden")) {
@@ -867,50 +884,82 @@ function createPeerConnection(stream) {
       remoteVideo.removeEventListener("playing", videoPlayingHandler);
       remoteVideo.removeEventListener("loadedmetadata", videoPlayingHandler);
       remoteVideo.removeEventListener("canplay", videoPlayingHandler);
+      remoteVideo.removeEventListener("loadeddata", videoPlayingHandler);
     }
     
-    // On mobile, ensure video element has proper attributes for autoplay
-    remoteVideo.setAttribute("playsinline", "true");
-    remoteVideo.setAttribute("webkit-playsinline", "true");
+    // Wait for video to have some data before trying to play (important for mobile)
+    const tryPlay = () => {
+      log(`🎬 Attempting to play remote video (readyState: ${remoteVideo.readyState})`);
+      const playPromise = remoteVideo.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            log("✅ Remote video started playing (muted)");
+            // Try to unmute after a short delay - this might work on some browsers
+            setTimeout(() => {
+              if (remoteVideo.muted) {
+                remoteVideo.muted = false;
+                remoteVideo.play().catch((err) => {
+                  // Silent fail - video is playing muted, user may need to interact
+                  logWarn("⚠️ Remote video remains muted due to autoplay policy:", err);
+                });
+              }
+            }, 500);
+          })
+          .catch(err => {
+            logWarn("⚠️ Error playing remote video:", err);
+            logWarn("⚠️ Error details - name:", err?.name, "message:", err?.message);
+            // On mobile, video might need user interaction - try again after a short delay
+            // Also ensure video is properly loaded
+            setTimeout(() => {
+              log(`🔄 Retrying play (readyState: ${remoteVideo.readyState})`);
+              if (remoteVideo.readyState >= 2) { // HAVE_CURRENT_DATA or higher
+                remoteVideo.play().then(() => {
+                  log("✅ Remote video started playing on retry");
+                }).catch((retryErr) => {
+                  logWarn("⚠️ Retry play failed:", retryErr?.name, retryErr?.message);
+                  // Video might need user interaction on mobile - log for debugging
+                  log("📱 Mobile: Video may require user interaction to play");
+                  log("📱 Try tapping the screen or a button to enable video playback");
+                });
+              } else {
+                logWarn("⚠️ Video not ready for playback (readyState < 2)");
+              }
+            }, 1000);
+          });
+      } else {
+        // Fallback: try to play after a short delay
+        log("⚠️ play() returned undefined, using fallback");
+        setTimeout(() => {
+          remoteVideo.play().then(() => {
+            log("✅ Remote video started playing (fallback)");
+          }).catch((err) => {
+            logWarn("⚠️ Fallback play failed:", err?.name, err?.message);
+          });
+        }, 100);
+      }
+    };
     
-    // Try to play immediately (muted for autoplay)
-    const playPromise = remoteVideo.play();
-    if (playPromise !== undefined) {
-      playPromise
-        .then(() => {
-          log("✅ Remote video started playing (muted)");
-          // Try to unmute after a short delay - this might work on some browsers
-          setTimeout(() => {
-            if (remoteVideo.muted) {
-              remoteVideo.muted = false;
-              remoteVideo.play().catch((err) => {
-                // Silent fail - video is playing muted, user may need to interact
-                logWarn("⚠️ Remote video remains muted due to autoplay policy:", err);
-              });
-            }
-          }, 500);
-        })
-        .catch(err => {
-          logWarn("⚠️ Error playing remote video (will retry):", err);
-          // On mobile, video might need user interaction - try again after a short delay
-          // Also ensure video is properly loaded
-          setTimeout(() => {
-            if (remoteVideo.readyState >= 2) { // HAVE_CURRENT_DATA or higher
-              remoteVideo.play().catch((retryErr) => {
-                logWarn("⚠️ Retry play failed:", retryErr);
-                // Video might need user interaction on mobile - log for debugging
-                log("📱 Mobile: Video may require user interaction to play");
-              });
-            }
-          }, 1000);
-        });
+    // Try to play immediately if video has data, otherwise wait for loadeddata
+    if (remoteVideo.readyState >= 2) {
+      log("📹 Video already has data, playing immediately");
+      tryPlay();
     } else {
-      // Fallback: try to play after a short delay
+      log("📹 Waiting for video data before playing...");
+      const dataHandler = () => {
+        log("📹 Video data loaded, attempting to play");
+        remoteVideo.removeEventListener("loadeddata", dataHandler);
+        tryPlay();
+      };
+      remoteVideo.addEventListener("loadeddata", dataHandler, { once: true });
+      
+      // Also try after a timeout as fallback
       setTimeout(() => {
-        remoteVideo.play().catch((err) => {
-          logWarn("⚠️ Fallback play failed:", err);
-        });
-      }, 100);
+        if (remoteVideo.readyState >= 1) { // HAVE_METADATA or higher
+          log("📹 Timeout: Video has metadata, attempting to play");
+          tryPlay();
+        }
+      }, 500);
     }
     
     // Listen for when video actually starts playing to ensure smooth transition
@@ -1202,71 +1251,29 @@ async function switchToCamera(deviceId) {
   try {
     log(`📹 Switching to camera: ${deviceId}`);
     
+    // IMPORTANT: Stop the old video track FIRST before requesting a new one
+    // This prevents "camera in use" errors and ensures we can switch cameras smoothly
+    const oldVideoTrack = localStream.getVideoTracks()[0];
+    if (oldVideoTrack) {
+      log("🛑 Stopping old video track before switching...");
+      oldVideoTrack.stop();
+      // Remove old track from stream
+      localStream.removeTrack(oldVideoTrack);
+    }
+    
     // Get new video track with selected camera
     // IMPORTANT: We already have camera permission from the initial getUserMedia call
-    // Browsers should reuse existing permission without prompting again
     // Only request video (no audio) to ensure we're reusing permission, not requesting new one
-    let newStream;
-    try {
-      // First try with ideal constraint (more flexible, works better on mobile)
-      // Only request video - no audio property at all (not even audio: false)
-      // This ensures browsers recognize this as reusing existing permission
-      newStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          deviceId: { ideal: deviceId },
-          width: CONFIG.VIDEO.width,
-          height: CONFIG.VIDEO.height
-        }
-        // Explicitly omit audio - we already have an audio track from the initial stream
-        // Not including audio property at all helps browsers recognize this as permission reuse
-      });
-      
-      // Verify we got the correct camera
-      const newTrack = newStream.getVideoTracks()[0];
-      const newSettings = newTrack?.getSettings();
-      if (newSettings?.deviceId !== deviceId) {
-        logWarn("⚠️ Got different camera with ideal constraint, trying exact...");
-        // Stop the wrong stream
-        newStream.getTracks().forEach(track => track.stop());
-        // Try with exact constraint
-        // Only request video - no audio property
-        newStream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            deviceId: { exact: deviceId },
-            width: CONFIG.VIDEO.width,
-            height: CONFIG.VIDEO.height
-          }
-          // No audio property - reusing existing permission
-        });
+    // Use simple deviceId constraint - should work on most devices without multiple attempts
+    log("📹 Requesting new camera stream...");
+    const newStream = await navigator.mediaDevices.getUserMedia({
+      video: { 
+        deviceId: deviceId, // Simple deviceId - works on most devices
+        width: CONFIG.VIDEO.width,
+        height: CONFIG.VIDEO.height
       }
-    } catch (err) {
-      // If ideal failed, try exact constraint
-      logWarn("⚠️ Ideal constraint failed, trying exact...");
-      try {
-        // Only request video - no audio property
-        newStream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            deviceId: { exact: deviceId },
-            width: CONFIG.VIDEO.width,
-            height: CONFIG.VIDEO.height
-          }
-          // No audio property - reusing existing permission
-        });
-      } catch (exactErr) {
-        // If exact also fails, try minimal constraints (mobile fallback)
-        logWarn("⚠️ Exact constraint failed, trying minimal constraints (mobile fallback)...");
-        logWarn("⚠️ Exact error:", exactErr?.name, exactErr?.message);
-        // Minimal constraints fallback - only video, no audio
-        newStream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            deviceId: deviceId, // Simple deviceId without ideal/exact
-            width: { ideal: 640 }, // Lower resolution for mobile
-            height: { ideal: 480 }
-          }
-          // No audio property - reusing existing permission
-        });
-      }
-    }
+      // No audio property - reusing existing permission
+    });
     
     const newVideoTrack = newStream.getVideoTracks()[0];
     if (!newVideoTrack) {
@@ -1299,11 +1306,7 @@ async function switchToCamera(deviceId) {
       }
     }
     
-    // Stop old video track
-    const oldVideoTrack = localStream.getVideoTracks()[0];
-    if (oldVideoTrack) {
-      oldVideoTrack.stop();
-    }
+    // Old video track was already stopped above, no need to stop again
     
     // Replace the entire stream in the video element
     // This is more reliable than trying to modify the existing stream
@@ -1349,12 +1352,12 @@ async function switchToCamera(deviceId) {
       errorMessage = "Camera permission denied. Please allow camera access and try again.";
     } else if (err?.name === "OverconstrainedError") {
       errorMessage = "Camera constraints not supported. Trying a different approach...";
-      // Try with minimal constraints as fallback
+      // Try with minimal constraints as fallback (only if OverconstrainedError)
       try {
         log("🔄 Trying fallback: minimal constraints...");
         const fallbackStream = await navigator.mediaDevices.getUserMedia({
-          video: { deviceId: deviceId },
-          audio: false,
+          video: { deviceId: deviceId }
+          // No audio property - reusing existing permission
         });
         const fallbackTrack = fallbackStream.getVideoTracks()[0];
         if (fallbackTrack) {
