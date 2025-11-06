@@ -848,6 +848,17 @@ function createPeerConnection(stream) {
   peer.on("stream", (stream) => {
     log("🎬 Remote stream received");
     
+    // Log stream details for debugging
+    const videoTracks = stream.getVideoTracks();
+    const audioTracks = stream.getAudioTracks();
+    log(`📊 Stream tracks: ${videoTracks.length} video, ${audioTracks.length} audio`);
+    if (videoTracks.length > 0) {
+      log(`📹 Video track: ${videoTracks[0].label || 'unnamed'}, enabled: ${videoTracks[0].enabled}, readyState: ${videoTracks[0].readyState}`);
+    }
+    if (audioTracks.length > 0) {
+      log(`🔊 Audio track: ${audioTracks[0].label || 'unnamed'}, enabled: ${audioTracks[0].enabled}, readyState: ${audioTracks[0].readyState}`);
+    }
+    
     // Ensure controls are visible immediately
     if (controls) {
       controls.style.display = "flex";
@@ -862,6 +873,14 @@ function createPeerConnection(stream) {
     // Set stream
     remoteVideo.srcObject = stream;
     log("📹 Remote stream set to video element");
+    
+    // Monitor stream for track changes
+    stream.onaddtrack = (event) => {
+      log(`➕ Track added to remote stream: ${event.track.kind} (${event.track.label || 'unnamed'})`);
+    };
+    stream.onremovetrack = (event) => {
+      logWarn(`➖ Track removed from remote stream: ${event.track.kind} (${event.track.label || 'unnamed'})`);
+    };
     
     // On mobile, videos need to be muted initially to autoplay (browser autoplay policy)
     // Start muted to ensure autoplay works
@@ -889,7 +908,7 @@ function createPeerConnection(stream) {
     
     // Wait for video to have some data before trying to play (important for mobile)
     const tryPlay = () => {
-      log(`🎬 Attempting to play remote video (readyState: ${remoteVideo.readyState})`);
+      log(`🎬 Attempting to play remote video (readyState: ${remoteVideo.readyState}, paused: ${remoteVideo.paused}, muted: ${remoteVideo.muted})`);
       const playPromise = remoteVideo.play();
       if (playPromise !== undefined) {
         playPromise
@@ -908,23 +927,28 @@ function createPeerConnection(stream) {
           })
           .catch(err => {
             logWarn("⚠️ Error playing remote video:", err);
-            logWarn("⚠️ Error details - name:", err?.name, "message:", err?.message);
+            logWarn("⚠️ Error details - name:", err?.name, "message:", err?.message, "code:", err?.code);
             // On mobile, video might need user interaction - try again after a short delay
             // Also ensure video is properly loaded
             setTimeout(() => {
-              log(`🔄 Retrying play (readyState: ${remoteVideo.readyState})`);
-              if (remoteVideo.readyState >= 2) { // HAVE_CURRENT_DATA or higher
-                remoteVideo.play().then(() => {
-                  log("✅ Remote video started playing on retry");
-                }).catch((retryErr) => {
-                  logWarn("⚠️ Retry play failed:", retryErr?.name, retryErr?.message);
-                  // Video might need user interaction on mobile - log for debugging
-                  log("📱 Mobile: Video may require user interaction to play");
-                  log("📱 Try tapping the screen or a button to enable video playback");
-                });
-              } else {
-                logWarn("⚠️ Video not ready for playback (readyState < 2)");
-              }
+              log(`🔄 Retrying play (readyState: ${remoteVideo.readyState}, paused: ${remoteVideo.paused})`);
+              // Try playing even if readyState is low - sometimes it works
+              remoteVideo.play().then(() => {
+                log("✅ Remote video started playing on retry");
+              }).catch((retryErr) => {
+                logWarn("⚠️ Retry play failed:", retryErr?.name, retryErr?.message);
+                // Try one more time after longer delay
+                setTimeout(() => {
+                  log("🔄 Final retry attempt...");
+                  remoteVideo.play().then(() => {
+                    log("✅ Remote video started playing on final retry");
+                  }).catch((finalErr) => {
+                    logWarn("⚠️ Final retry failed:", finalErr?.name, finalErr?.message);
+                    log("📱 Mobile: Video may require user interaction to play");
+                    log("📱 Try tapping the screen or a button to enable video playback");
+                  });
+                }, 2000);
+              });
             }, 1000);
           });
       } else {
@@ -953,13 +977,27 @@ function createPeerConnection(stream) {
       };
       remoteVideo.addEventListener("loadeddata", dataHandler, { once: true });
       
-      // Also try after a timeout as fallback
+      // Also try after a timeout as fallback - be more aggressive on mobile
       setTimeout(() => {
         if (remoteVideo.readyState >= 1) { // HAVE_METADATA or higher
           log("📹 Timeout: Video has metadata, attempting to play");
           tryPlay();
+        } else {
+          logWarn(`⚠️ Video still not ready after timeout (readyState: ${remoteVideo.readyState})`);
+          // Try anyway - sometimes video can play even if readyState is low
+          tryPlay();
         }
       }, 500);
+      
+      // Additional fallback - try playing after longer delay (mobile sometimes needs more time)
+      setTimeout(() => {
+        if (!remoteVideo.paused) {
+          log("✅ Video is already playing");
+        } else {
+          log("🔄 Additional fallback: attempting to play video");
+          tryPlay();
+        }
+      }, 2000);
     }
     
     // Listen for when video actually starts playing to ensure smooth transition
@@ -984,6 +1022,8 @@ function createPeerConnection(stream) {
         remoteVideo.removeEventListener("playing", videoPlayingHandler);
         remoteVideo.removeEventListener("loadedmetadata", videoPlayingHandler);
         remoteVideo.removeEventListener("canplay", videoPlayingHandler);
+        remoteVideo.removeEventListener("loadeddata", videoPlayingHandler);
+        remoteVideo.removeEventListener("timeupdate", videoPlayingHandler);
         videoPlayingHandler = null;
       }
     };
@@ -993,6 +1033,30 @@ function createPeerConnection(stream) {
     remoteVideo.addEventListener("playing", videoPlayingHandler, { once: true });
     remoteVideo.addEventListener("loadedmetadata", videoPlayingHandler, { once: true });
     remoteVideo.addEventListener("canplay", videoPlayingHandler, { once: true });
+    remoteVideo.addEventListener("loadeddata", videoPlayingHandler, { once: true });
+    
+    // Also listen for timeupdate - this means video is actually playing
+    remoteVideo.addEventListener("timeupdate", () => {
+      if (!remoteVideo.paused && remoteVideo.currentTime > 0) {
+        log("✅ Remote video timeupdate - video is playing (currentTime: " + remoteVideo.currentTime.toFixed(2) + "s)");
+        if (videoPlayingHandler) {
+          videoPlayingHandler();
+        }
+      }
+    }, { once: true });
+    
+    // Monitor video element state changes for debugging
+    remoteVideo.addEventListener("loadstart", () => log("📹 Remote video: loadstart"));
+    remoteVideo.addEventListener("loadedmetadata", () => log("📹 Remote video: loadedmetadata (readyState: " + remoteVideo.readyState + ")"));
+    remoteVideo.addEventListener("loadeddata", () => log("📹 Remote video: loadeddata (readyState: " + remoteVideo.readyState + ")"));
+    remoteVideo.addEventListener("canplay", () => log("📹 Remote video: canplay (readyState: " + remoteVideo.readyState + ")"));
+    remoteVideo.addEventListener("canplaythrough", () => log("📹 Remote video: canplaythrough (readyState: " + remoteVideo.readyState + ")"));
+    remoteVideo.addEventListener("playing", () => log("📹 Remote video: playing event"));
+    remoteVideo.addEventListener("pause", () => logWarn("⚠️ Remote video: paused"));
+    remoteVideo.addEventListener("error", (e) => {
+      logWarn("❌ Remote video error:", e);
+      logWarn("❌ Video error code:", remoteVideo.error?.code, "message:", remoteVideo.error?.message);
+    });
   });
 
   peer.on("error", (err) => {
@@ -1102,23 +1166,44 @@ function createPeerConnection(stream) {
     }
     
     // "disconnected" is a normal intermediate state - allow it to recover
+    // However, if we have a remote stream, the connection might still be working
+    // Don't treat "disconnected" as a failure if we have an active stream
     if (state === "disconnected") {
-      log("⚠️ ICE disconnected (may recover)...");
+      const hasRemoteStream = remoteVideo && remoteVideo.srcObject;
+      if (hasRemoteStream) {
+        log("⚠️ ICE disconnected but remote stream exists - connection may still work");
+      } else {
+        log("⚠️ ICE disconnected (may recover)...");
+      }
       return;
     }
     
     // Only recreate on "failed" state - never on "disconnected"
     // "failed" means the connection definitely won't work
+    // BUT: if we have a remote stream, don't recreate - the stream proves connection works
     if (state === "failed" && !isRecreatingPeer && !hasConnected) {
+      const hasRemoteStream = remoteVideo && remoteVideo.srcObject;
+      if (hasRemoteStream) {
+        log("⚠️ ICE failed but remote stream exists - connection is working, not recreating");
+        hasConnected = true; // Mark as connected since we have a stream
+        return;
+      }
+      
       if (ws && ws.readyState === WebSocket.OPEN && peer) {
         log(`♻️ ICE connection failed, will recreate peer after delay...`);
         isRecreatingPeer = true;
         setTimeout(() => {
-          if (!hasConnected && peer) {
+          // Check again if we have a stream before recreating
+          const stillHasRemoteStream = remoteVideo && remoteVideo.srcObject;
+          if (!hasConnected && peer && !stillHasRemoteStream) {
             log(`♻️ ICE connection failed, recreating peer...`);
             isRecreatingPeer = false;
             initPeer();
           } else {
+            if (stillHasRemoteStream) {
+              log("✅ Remote stream appeared, connection is working - not recreating");
+              hasConnected = true;
+            }
             isRecreatingPeer = false;
           }
         }, CONFIG.PEER_RECREATE_DELAY * 2); // Longer delay for ICE failures
