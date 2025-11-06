@@ -1011,23 +1011,34 @@ function createPeerConnection(stream) {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
     
-    // CRITICAL FIX: Some browsers (especially mobile) don't process MediaStream
-    // until the video element is "reset". Force processing by clearing and resetting.
-    // This is a known workaround for browsers that don't progress past readyState 0.
-    log("🔄 Forcing video element to process MediaStream (workaround for readyState 0 bug)...");
+    // CRITICAL FIX: Race condition - ensure video element is fully initialized
+    // before setting stream and attempting to play. Order matters!
+    log("🔄 Setting up video element for MediaStream...");
     
-    // First, ensure video is visible and has all required attributes
+    // STEP 1: Ensure video element is visible and has all required attributes FIRST
     remoteVideo.style.display = "block";
     remoteVideo.classList.add("playing");
+    remoteVideo.setAttribute("playsinline", "true");
+    remoteVideo.setAttribute("webkit-playsinline", "true");
+    remoteVideo.setAttribute("autoplay", "true");
+    remoteVideo.muted = true; // Set muted BEFORE setting stream (critical for autoplay)
+    log("🔇 Remote video muted for autoplay");
     
-    // Set stream
+    // STEP 2: Set stream AFTER attributes are set
     remoteVideo.srcObject = stream;
     log("📹 Remote stream set to video element");
     
-    // CRITICAL: Force browser to process the stream by:
-    // 1. Immediately trying to play (this triggers processing on some browsers)
-    // 2. If that doesn't work, reset srcObject after a brief delay
+    // STEP 3: Wait a tiny bit for DOM to update, then force processing
+    // This fixes the race condition where video element isn't ready
     const forceProcess = async () => {
+      // Wait for next animation frame to ensure DOM is updated
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      
+      // Check if video is still paused (race condition indicator)
+      if (remoteVideo.paused) {
+        log("🔄 Video is paused - forcing play to start processing...");
+      }
+      
       try {
         // Try immediate play
         log("🔄 Attempting immediate play to force processing...");
@@ -1054,7 +1065,7 @@ function createPeerConnection(stream) {
       }
     };
     
-    // Execute immediately
+    // Execute after a brief delay to ensure video element is ready
     forceProcess();
     
     // Monitor stream for track changes
@@ -1088,14 +1099,7 @@ function createPeerConnection(stream) {
       };
     }
     
-    // On mobile, videos need to be muted initially to autoplay (browser autoplay policy)
-    // Start muted to ensure autoplay works
-    remoteVideo.muted = true;
-    log("🔇 Remote video muted for autoplay");
-    
-    // Show video element immediately
-    remoteVideo.classList.add("playing");
-    remoteVideo.style.display = "block";
+    // Video element attributes and visibility already set above
     log("👁️ Remote video element made visible");
     
     // Hide waiting screen when remote stream is received (client has joined)

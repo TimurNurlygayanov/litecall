@@ -1,63 +1,63 @@
-[2025-11-06T11:21:44.076Z] 📥 Processing queued signal 8/10: candidate
-[2025-11-06T11:21:44.076Z] ✅ Successfully processed queued signal: candidate
-[2025-11-06T11:21:44.076Z] ✅ Successfully processed queued signal: candidate
-[2025-11-06T11:21:44.076Z] 📥 Processing queued signal 9/10: candidate
-[2025-11-06T11:21:44.076Z] 📥 Processing queued signal 9/10: candidate
-[2025-11-06T11:21:44.076Z] ✅ Successfully processed queued signal: candidate
-[2025-11-06T11:21:44.076Z] ✅ Successfully processed queued signal: candidate
-[2025-11-06T11:21:44.076Z] 📥 Processing queued signal 10/10: candidate
-[2025-11-06T11:21:44.076Z] 📥 Processing queued signal 10/10: candidate
-[2025-11-06T11:21:44.076Z] ✅ Successfully processed queued signal: candidate
-[2025-11-06T11:21:44.076Z] ✅ Successfully processed queued signal: candidate
-[2025-11-06T11:21:44.076Z] ✅ Finished processing 10/10 queued signals
-[2025-11-06T11:21:44.076Z] ✅ Finished processing 10/10 queued signals
-[2025-11-06T11:21:44.090Z] 🎬 Remote stream received
-[2025-11-06T11:21:44.090Z] 🎬 Remote stream received
-[2025-11-06T11:21:44.090Z] 📊 Stream tracks: 1 video, 1 audio
-[2025-11-06T11:21:44.090Z] 📊 Stream tracks: 1 video, 1 audio
-[2025-11-06T11:21:44.091Z] 📹 Video track: 5db21561-124c-4937-b670-df7721106fbf, enabled: true, readyState: live
-[2025-11-06T11:21:44.091Z] 📹 Video track: 5db21561-124c-4937-b670-df7721106fbf, enabled: true, readyState: live
-[2025-11-06T11:21:44.091Z] 🔊 Audio track: 71cc6f3e-ba19-4b24-b766-b1963f0c6bf9, enabled: true, readyState: live
-[2025-11-06T11:21:44.091Z] 🔊 Audio track: 71cc6f3e-ba19-4b24-b766-b1963f0c6bf9, enabled: true, readyState: live
-[2025-11-06T11:21:44.091Z] 📹 Remote stream set to video element
-[2025-11-06T11:21:44.091Z] 📹 Remote stream set to video element
-[2025-11-06T11:21:44.091Z] 🔄 Attempting immediate play to force video processing...
-[2025-11-06T11:21:44.091Z] 🔄 Attempting immediate play to force video processing...
-[2025-11-06T11:21:44.091Z] 🔇 Remote video muted for autoplay
-[2025-11-06T11:21:44.092Z] 🔇 Remote video muted for autoplay
-[2025-11-06T11:21:44.092Z] 👁️ Remote video element made visible
-[2025-11-06T11:21:44.092Z] 👁️ Remote video element made visible
-[2025-11-06T11:21:44.092Z] 📹 Waiting for video data before playing...
-[2025-11-06T11:21:44.092Z] 📹 Waiting for video data before playing...
-[2025-11-06T11:21:44.092Z] 🔄 Attempting play with readyState 0 (may be needed to start processing)...
-[2025-11-06T11:21:44.092Z] 🔄 Attempting play with readyState 0 (may be needed to start processing)...
-[2025-11-06T11:21:44.092Z] 🎬 Attempting to play remote video (readyState: 0, paused: false, muted: true)
-[2025-11-06T11:21:44.092Z] 🎬 Attempting to play remote video (readyState: 0, paused: false, muted: true)
-[2025-11-06T11:21:44.093Z] ✅ Remote video track unmuted
-[2025-11-06T11:21:44.093Z] ✅ Remote video track unmuted
-[2025-11-06T11:21:44.136Z] 📹 Remote video: loadstart (readyState: 0)
-[2025-11-06T11:21:44.136Z] 📹 Remote video: loadstart (readyState: 0)
-[2025-11-06T11:21:44.156Z] 📤 Sending signal: answer (SDP length: 4588 chars)
-[2025-11-06T11:21:44.156Z] 📤 Sending signal: answer (SDP length: 4588 chars)
-[2025-11-06T11:21:44.156Z] 📤 SDP contains 0 ICE candidates
-[2025-11-06T11:21:44.156Z] 📤 SDP contains 0 ICE candidates
-[2025-11-06T11:21:44.158Z] 🧊 ICE state: new
-[2025-11-06T11:21:44.158Z] 🧊 ICE state: new
-[2025-11-06T11:21:44.158Z] 🧊 ICE gathering: gathering, connection: new, peer: new
-[2025-11-06T11:21:44.158Z] 🧊 ICE gathering: gathering, connection: new, peer: new
-[2025-11-06T11:21:44.161Z] 🧊 ICE state: checking
-[2025-11-06T11:21:44.161Z] 🧊 ICE state: checking
-[2025-11-06T11:21:44.161Z] 🧊 ICE gathering: gathering, connection: checking, peer: new
-[2025-11-06T11:21:44.161Z] 🧊 ICE gathering: gathering, connection: checking, peer: new
+[2025-11-06T11:50:52.725Z] 📥 Processing queued signal 8/10: candidate
+[2025-11-06T11:50:52.725Z] ✅ Successfully processed queued signal: candidate
+[2025-11-06T11:50:52.725Z] ✅ Successfully processed queued signal: candidate
+[2025-11-06T11:50:52.725Z] 📥 Processing queued signal 9/10: candidate
+[2025-11-06T11:50:52.725Z] 📥 Processing queued signal 9/10: candidate
+[2025-11-06T11:50:52.725Z] ✅ Successfully processed queued signal: candidate
+[2025-11-06T11:50:52.725Z] ✅ Successfully processed queued signal: candidate
+[2025-11-06T11:50:52.725Z] 📥 Processing queued signal 10/10: candidate
+[2025-11-06T11:50:52.725Z] 📥 Processing queued signal 10/10: candidate
+[2025-11-06T11:50:52.725Z] ✅ Successfully processed queued signal: candidate
+[2025-11-06T11:50:52.725Z] ✅ Successfully processed queued signal: candidate
+[2025-11-06T11:50:52.725Z] ✅ Finished processing 10/10 queued signals
+[2025-11-06T11:50:52.725Z] ✅ Finished processing 10/10 queued signals
+[2025-11-06T11:50:52.743Z] 🎬 Remote stream received
+[2025-11-06T11:50:52.743Z] 🎬 Remote stream received
+[2025-11-06T11:50:52.743Z] 📊 Stream tracks: 1 video, 1 audio
+[2025-11-06T11:50:52.743Z] 📊 Stream tracks: 1 video, 1 audio
+[2025-11-06T11:50:52.743Z] 📹 Video track: ce208db5-54b5-450a-b2bf-51dd054d8f43, enabled: true, readyState: live
+[2025-11-06T11:50:52.743Z] 📹 Video track: ce208db5-54b5-450a-b2bf-51dd054d8f43, enabled: true, readyState: live
+[2025-11-06T11:50:52.743Z] 🔊 Audio track: ced8ecaa-250d-4cc0-95d2-a6ad92c34b8f, enabled: true, readyState: live
+[2025-11-06T11:50:52.743Z] 🔊 Audio track: ced8ecaa-250d-4cc0-95d2-a6ad92c34b8f, enabled: true, readyState: live
+[2025-11-06T11:50:52.743Z] 🔄 Forcing video element to process MediaStream (workaround for readyState 0 bug)...
+[2025-11-06T11:50:52.743Z] 🔄 Forcing video element to process MediaStream (workaround for readyState 0 bug)...
+[2025-11-06T11:50:52.744Z] 📹 Remote stream set to video element
+[2025-11-06T11:50:52.744Z] 📹 Remote stream set to video element
+[2025-11-06T11:50:52.744Z] 🔄 Attempting immediate play to force processing...
+[2025-11-06T11:50:52.744Z] 🔄 Attempting immediate play to force processing...
+[2025-11-06T11:50:52.744Z] 🔇 Remote video muted for autoplay
+[2025-11-06T11:50:52.744Z] 🔇 Remote video muted for autoplay
+[2025-11-06T11:50:52.744Z] 👁️ Remote video element made visible
+[2025-11-06T11:50:52.744Z] 👁️ Remote video element made visible
+[2025-11-06T11:50:52.744Z] 📹 Waiting for video data before playing...
+[2025-11-06T11:50:52.744Z] 📹 Waiting for video data before playing...
+[2025-11-06T11:50:52.744Z] 🔄 Attempting play with readyState 0 (may be needed to start processing)...
+[2025-11-06T11:50:52.744Z] 🔄 Attempting play with readyState 0 (may be needed to start processing)...
+[2025-11-06T11:50:52.744Z] 🎬 Attempting to play remote video (readyState: 0, paused: false, muted: true)
+[2025-11-06T11:50:52.744Z] 🎬 Attempting to play remote video (readyState: 0, paused: false, muted: true)
+[2025-11-06T11:50:52.745Z] ✅ Remote video track unmuted
+[2025-11-06T11:50:52.745Z] ✅ Remote video track unmuted
+[2025-11-06T11:50:52.806Z] 📹 Remote video: loadstart (readyState: 0)
+[2025-11-06T11:50:52.806Z] 📹 Remote video: loadstart (readyState: 0)
+[2025-11-06T11:50:52.834Z] 📤 Sending signal: answer (SDP length: 4588 chars)
+[2025-11-06T11:50:52.834Z] 📤 Sending signal: answer (SDP length: 4588 chars)
+[2025-11-06T11:50:52.834Z] 📤 SDP contains 0 ICE candidates
+[2025-11-06T11:50:52.834Z] 📤 SDP contains 0 ICE candidates
+[2025-11-06T11:50:52.835Z] 🧊 ICE state: new
+[2025-11-06T11:50:52.835Z] 🧊 ICE state: new
+[2025-11-06T11:50:52.835Z] 🧊 ICE gathering: gathering, connection: new, peer: new
+[2025-11-06T11:50:52.835Z] 🧊 ICE gathering: gathering, connection: new, peer: new
+[2025-11-06T11:50:52.839Z] 🧊 ICE state: checking
 
 
-[2025-11-06T11:21:44.163Z] 📤 Sending signal: candidate (host, candidate:2444030490 1 udp 2113937151 10.161.103.1...)
-[2025-11-06T11:21:44.163Z] 📤 Sending signal: candidate (host, candidate:2444030490 1 udp 2113937151 10.161.103.1...)
-[2025-11-06T11:21:44.297Z] 📹 Found 4 cameras
-[2025-11-06T11:21:44.297Z] 📹 Found 4 cameras
-[2025-11-06T11:21:44.298Z] 📱 Switch camera visible - hiding fullscreen button
-[2025-11-06T11:21:44.298Z] 📱 Switch camera visible - hiding fullscreen button
-[2025-11-06T11:21:44.333Z] 📤 Sending signal: candidate (srflx, candidate:3144052110 1 udp 1677729535 46.199.19.17...)
-[2025-11-06T11:21:44.333Z] 📤 Sending signal: candidate (srflx, candidate:3144052110 1 udp 1677729535 46.199.19.17...)
-[2025-11-06T11:21:44.593Z] WARN: ⚠️ Video still not ready after timeout (readyState: 0)
-[2025-11-06T11:21:44.593Z] 🔄 Forcing play attempt despi
+[2025-11-06T11:50:52.839Z] 🧊 ICE state: checking
+[2025-11-06T11:50:52.840Z] 🧊 ICE gathering: gathering, connection: checking, peer: new
+[2025-11-06T11:50:52.840Z] 🧊 ICE gathering: gathering, connection: checking, peer: new
+[2025-11-06T11:50:52.842Z] 📤 Sending signal: candidate (host, candidate:567487314 1 udp 2113937151 10.161.103.17...)
+[2025-11-06T11:50:52.842Z] 📤 Sending signal: candidate (host, candidate:567487314 1 udp 2113937151 10.161.103.17...)
+[2025-11-06T11:50:52.950Z] 📹 Found 3 cameras
+[2025-11-06T11:50:52.950Z] 📹 Found 3 cameras
+[2025-11-06T11:50:52.950Z] 📱 Switch camera visible - hiding fullscreen button
+[2025-11-06T11:50:52.950Z] 📱 Switch camera visible - hiding fullscreen button
+[2025-11-06T11:50:53.171Z] 📤 Sending signal: candidate (srflx, candidate:1414447187 1 udp 1677729535 46.199.19.17...)
+[2025-11-06T11:50:53.171Z] 📤 Sending signal: candi
