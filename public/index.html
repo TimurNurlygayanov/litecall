@@ -115,6 +115,33 @@
       letter-spacing: 0.05em;
     }
     
+    /* Pink neon blinking effect for letters */
+    .page-1 h1 .letter {
+      display: inline-block;
+      transition: all 0.15s ease;
+    }
+    
+    .page-1 h1 .letter.blink {
+      color: #ff00ff;
+      text-shadow: 
+        0 0 10px rgba(255, 0, 255, 0.9),
+        0 0 20px rgba(255, 0, 255, 0.7),
+        0 0 30px rgba(255, 0, 255, 0.5),
+        0 0 40px rgba(255, 0, 255, 0.3),
+        0 0 50px rgba(255, 0, 255, 0.2);
+      animation: neonBlink 0.3s ease;
+      filter: saturate(1.5);
+    }
+    
+    @keyframes neonBlink {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+    }
+    
     .page-1 .subtitle {
       font-size: clamp(1rem, 2.5vw, 1.25rem);
       text-align: center;
@@ -218,17 +245,29 @@
       content: "✓";
       position: absolute;
       left: 0;
-      top: 0;
+      top: 0.1em;
       color: #00ffff;
       font-size: 1.5rem;
       font-weight: bold;
-      line-height: 1.8;
+      line-height: 1;
       display: flex;
-      align-items: center;
-      height: 1.8em;
+      align-items: flex-start;
+      height: 1.2em;
       text-shadow: 
         0 0 8px rgba(0, 255, 255, 0.8),
         0 0 16px rgba(0, 255, 255, 0.4);
+    }
+    
+    /* Adjust checkbox position for single-line items on desktop */
+    @media (min-width: 769px) {
+      .features-list li {
+        align-items: center;
+      }
+      .features-list li::before {
+        top: 0;
+        align-items: center;
+        height: 1.8em;
+      }
     }
 
     .features-list li:last-child {
@@ -347,7 +386,9 @@
 <body>
   <!-- First Page -->
   <div class="page page-1">
-    <h1>Private Video Calls</h1>
+    <h1 id="main-header">
+      <span class="letter">P</span><span class="letter">r</span><span class="letter">i</span><span class="letter">v</span><span class="letter">a</span><span class="letter">t</span><span class="letter">e</span><span class="letter"> </span><span class="letter">V</span><span class="letter">i</span><span class="letter">d</span><span class="letter">e</span><span class="letter">o</span><span class="letter"> </span><span class="letter">C</span><span class="letter">a</span><span class="letter">l</span><span class="letter">l</span><span class="letter">s</span>
+    </h1>
     <p class="subtitle">No sign-up, no tracking, no limits.</p>
     <button id="create">Start a Call</button>
     <div id="counter"></div>
@@ -365,7 +406,7 @@
         <li>Leaves no traces - no tracking, no cookies, no data collection</li>
         <li>Peer-to-peer connection - your data never goes through our servers</li>
         <li>All calls are secure with SSL encryption</li>
-        <li>Private, secure, free — and it just works</li>
+        <li>Private, secure, and completely free</li>
       </ul>
     </div>
   </div>
@@ -379,7 +420,7 @@
         <p>Built with WebRTC and <a href="https://github.com/feross/simple-peer" target="_blank" rel="noopener noreferrer">SimplePeer</a> library</p>
         <p>Developed with the assistance of ChatGPT and Cursor AI</p>
         <p>Hosted by <a href="https://render.com" target="_blank" rel="noopener noreferrer">Render.com</a></p>
-        <p>Want to contribute? Fix bugs or add features by contributing to <a href="https://github.com/TimurNurlygayanov/litecall" target="_blank" rel="noopener noreferrer">LiteCall project Github</a></p>
+        <p>Want to contribute? Contribute to <a href="https://github.com/TimurNurlygayanov/litecall" target="_blank" rel="noopener noreferrer">LiteCall on Github</a></p>
       </div>
     </div>
   </div>
@@ -421,6 +462,80 @@
         }
       }, 1000);
     });
+
+    // Fun effect: After 5 seconds of hovering over "Start a Call" button,
+    // letters in the header start blinking with pink neon highlight randomly
+    (function() {
+      const createButton = document.getElementById("create");
+      const header = document.getElementById("main-header");
+      const letters = header.querySelectorAll(".letter");
+      let hoverTimeout = null;
+      let blinkingInterval = null;
+      let isBlinking = false;
+
+      function startBlinking() {
+        if (isBlinking) return;
+        isBlinking = true;
+
+        // Function to randomly blink a letter
+        function blinkRandomLetter() {
+          // Remove blink class from all letters first
+          letters.forEach(letter => letter.classList.remove("blink"));
+
+          // Skip spaces
+          const nonSpaceLetters = Array.from(letters).filter(letter => 
+            letter.textContent.trim() !== ""
+          );
+
+          if (nonSpaceLetters.length === 0) return;
+
+          // Pick a random letter
+          const randomLetter = nonSpaceLetters[
+            Math.floor(Math.random() * nonSpaceLetters.length)
+          ];
+
+          // Add blink class
+          randomLetter.classList.add("blink");
+
+          // Remove blink class after animation
+          setTimeout(() => {
+            randomLetter.classList.remove("blink");
+          }, 300);
+        }
+
+        // Start blinking letters randomly (one every 200-400ms)
+        blinkingInterval = setInterval(() => {
+          blinkRandomLetter();
+        }, 200 + Math.random() * 200);
+      }
+
+      function stopBlinking() {
+        isBlinking = false;
+        if (blinkingInterval) {
+          clearInterval(blinkingInterval);
+          blinkingInterval = null;
+        }
+        // Remove blink class from all letters
+        letters.forEach(letter => letter.classList.remove("blink"));
+      }
+
+      createButton.addEventListener("mouseenter", () => {
+        // Start timer for 5 seconds
+        hoverTimeout = setTimeout(() => {
+          startBlinking();
+        }, 5000);
+      });
+
+      createButton.addEventListener("mouseleave", () => {
+        // Clear timer if mouse leaves before 5 seconds
+        if (hoverTimeout) {
+          clearTimeout(hoverTimeout);
+          hoverTimeout = null;
+        }
+        // Stop blinking
+        stopBlinking();
+      });
+    })();
   </script>
 </body>
 </html>

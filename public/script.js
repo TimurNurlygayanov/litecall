@@ -144,6 +144,9 @@ if (!room || !ROOM_ID_PATTERN.test(room)) {
 const localVideo = document.getElementById("local");
 const remoteVideo = document.getElementById("remote");
 const waitingScreen = document.getElementById("waiting-screen");
+const waitingContent = document.getElementById("waiting-content");
+const waitingTitle = document.getElementById("waiting-title");
+const linkWidget = document.getElementById("link-widget");
 const meetingLinkInput = document.getElementById("meeting-link");
 const copyLinkBtn = document.getElementById("copy-link-btn");
 const controls = document.getElementById("controls");
@@ -290,9 +293,11 @@ function initWebSocket() {
             log("✨ Making waiting screen semi-transparent so video shows through");
           }
           
-          // For clients: if waiting screen is hidden (joining existing room), show controls now
-          if (!isHost && waitingScreen && waitingScreen.classList.contains("hidden")) {
-            log("👤 Client: camera accepted, showing controls...");
+          // For clients: when camera is accepted, hide waiting screen and show controls
+          if (!isHost && waitingScreen) {
+            log("👤 Client: camera accepted, hiding waiting screen and showing controls...");
+            // Hide the empty magenta waiting screen now that streaming has started
+            waitingScreen.classList.add("hidden");
             if (controls) {
               controls.style.display = "flex";
               controls.style.visibility = "visible";
@@ -403,6 +408,8 @@ function initWebSocket() {
         // until a client actually joins (so host can share the link)
         if (isHost && waitingScreen) {
           log("👤 Host detected, showing controls but keeping link widget visible...");
+          // Show the link widget for hosts
+          waitingScreen.classList.add("show-link-widget");
           // Don't hide waiting screen yet - keep it visible so host can share the link
           // Make it semi-transparent so local video shows through
           if (localStream) {
@@ -421,11 +428,21 @@ function initWebSocket() {
           }
         }
         
-        // If client joins and host is already active (totalClients > 1), hide waiting screen immediately
-        // Show empty page (no "share link" widget) - client will see their video once camera is accepted
+        // If client joins and host is already active (totalClients > 1), hide link widget but keep empty magenta screen
+        // Client should never see "share link" widget - show empty magenta background until streaming starts
         if (!isHost && data.totalClients > 1 && waitingScreen) {
-          log("👥 Host already active, hiding waiting screen immediately (client joining existing room)...");
-          waitingScreen.classList.add("hidden");
+          log("👥 Host already active, hiding link widget for client (client joining existing room)...");
+          // Hide the link widget and title - show empty magenta screen
+          if (linkWidget) {
+            linkWidget.style.display = "none";
+          }
+          if (waitingTitle) {
+            waitingTitle.style.display = "none";
+          }
+          if (waitingContent) {
+            waitingContent.style.display = "none";
+          }
+          // Keep waiting screen visible (empty magenta background) until camera is accepted
           // Don't show controls yet - wait for camera permission
           // Local video will be shown once getUserMedia succeeds
         }

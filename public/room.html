@@ -68,6 +68,18 @@
       padding: 2rem;
       transition: opacity 0.5s ease, visibility 0.5s ease;
     }
+    
+    /* Initially hide link widget and title - will be shown only for hosts */
+    #link-widget,
+    #waiting-title {
+      display: none;
+    }
+    
+    /* Show link widget and title for hosts */
+    #waiting-screen.show-link-widget #link-widget,
+    #waiting-screen.show-link-widget #waiting-title {
+      display: block;
+    }
 
     #waiting-screen.hidden {
       opacity: 0;
@@ -324,9 +336,9 @@
 <body>
   <!-- Waiting Screen -->
   <div id="waiting-screen">
-    <div class="waiting-content">
-      <h1 class="waiting-title">Waiting for another person to join the call</h1>
-      <div class="link-widget">
+    <div class="waiting-content" id="waiting-content">
+      <h1 class="waiting-title" id="waiting-title">Waiting for another person to join the call</h1>
+      <div class="link-widget" id="link-widget">
         <div class="link-label">Meeting link</div>
         <div class="link-container">
           <input type="text" id="meeting-link" class="link-input" readonly />
@@ -351,7 +363,7 @@
       <img src="/images/cam-switch.svg" alt="Switch Camera" id="switch-camera-icon" />
     </button>
     <button id="btn-fullscreen" title="Fullscreen">⛶</button>
-    <button id="btn-copy-logs" title="Copy Logs">📋</button>
+    <button id="btn-copy-logs" title="Copy Logs" style="display: none;">📋</button>
     <button id="btn-leave" title="Disconnect">
       <img src="/images/end-call-icon.svg" alt="End Call" id="leave-icon" />
     </button>

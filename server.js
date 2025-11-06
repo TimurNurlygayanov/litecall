@@ -4,6 +4,7 @@ import fs from "fs";
 import url from "url";
 import path from "path";
 import { fileURLToPath } from "url";
+import crypto from "crypto";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -50,14 +51,75 @@ function saveCounter(count) {
 let callCount = loadCounter();
 console.log(`📊 Initial call count loaded: ${callCount}`);
 
+// Generate version hash for static assets (for cache busting)
+function getAssetVersion(filePath) {
+  try {
+    const fullPath = path.join(__dirname, "public", filePath);
+    if (fs.existsSync(fullPath)) {
+      const content = fs.readFileSync(fullPath);
+      const hash = crypto.createHash("md5").update(content).digest("hex").substring(0, 8);
+      return hash;
+    }
+  } catch (err) {
+    console.error(`❌ Error generating version for ${filePath}:`, err);
+  }
+  return Date.now().toString(36); // Fallback to timestamp
+}
+
+// Generate versions for main assets
+const scriptVersion = getAssetVersion("script.js");
+console.log(`📦 Asset version (script.js): ${scriptVersion}`);
+
+// Generate version for images directory (use a single version for all images)
+// This will change if any image changes, forcing cache refresh
+function getImagesVersion() {
+  try {
+    const imagesDir = path.join(__dirname, "public", "images");
+    if (fs.existsSync(imagesDir)) {
+      const files = fs.readdirSync(imagesDir);
+      const hash = crypto.createHash("md5");
+      files.sort().forEach(file => {
+        const filePath = path.join(imagesDir, file);
+        if (fs.statSync(filePath).isFile()) {
+          hash.update(fs.readFileSync(filePath));
+        }
+      });
+      return hash.digest("hex").substring(0, 8);
+    }
+  } catch (err) {
+    console.error(`❌ Error generating images version:`, err);
+  }
+  return Date.now().toString(36); // Fallback to timestamp
+}
+
+const imagesVersion = getImagesVersion();
+console.log(`📦 Asset version (images): ${imagesVersion}`);
+
 const connections = {}; // roomId -> [clients]
 const lastSignals = {}; // roomId -> last offer/answer
 const recentCandidates = {}; // roomId -> [recent ICE candidates from host] (for late-joining clients)
 const hosts = {}; // roomId -> first client WebSocket (the host)
 
 
-// Отдаём статические файлы из public/
-app.use(express.static("public"));
+// Отдаём статические файлы из public/ с кэшированием
+// Set cache headers for static assets (JS, images, etc.)
+app.use(express.static("public", {
+  maxAge: "1y", // Cache for 1 year
+  etag: true, // Enable ETags for cache validation
+  lastModified: true, // Send Last-Modified header
+  setHeaders: (res, path) => {
+    // Set aggressive caching for JS and image files
+    if (path.match(/\.(js|png|svg|jpg|jpeg|gif|webp|ico)$/)) {
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable"); // 1 year, immutable
+    }
+    // HTML files should not be cached (always get fresh version)
+    if (path.match(/\.html$/)) {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+    }
+  }
+}));
 
 // ✅ Фикс: поддержка прямого перехода на /room?id=...
 app.get("/room", (req, res) => {
@@ -66,7 +128,21 @@ app.get("/room", (req, res) => {
     // если id отсутствует — просто редирект на главную
     return res.redirect("/");
   }
-  res.sendFile(path.join(__dirname, "public", "room.html"));
+  // Read room.html and inject version into script.js and image references
+  const roomHtmlPath = path.join(__dirname, "public", "room.html");
+  let roomHtml = fs.readFileSync(roomHtmlPath, "utf8");
+  // Replace script.js with versioned version
+  roomHtml = roomHtml.replace(
+    /src="script\.js"/g,
+    `src="script.js?v=${scriptVersion}"`
+  );
+  // Replace image references with versioned versions
+  roomHtml = roomHtml.replace(
+    /src="\/images\/([^"]+)"/g,
+    `src="/images/$1?v=${imagesVersion}"`
+  );
+  res.setHeader("Content-Type", "text/html");
+  res.send(roomHtml);
 });
 
 // API для статистики звонков
