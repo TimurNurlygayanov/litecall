@@ -1,9 +1,98 @@
 // ====== Debug Flag ======
 const DEBUG = true; // Set to true to enable verbose logging
 
+// ====== Log History for Debugging ======
+const logHistory = [];
+const MAX_LOG_HISTORY = 1000; // Keep last 1000 log entries
+
 // ====== Logging Utility ======
-const log = (...args) => DEBUG && console.log(...args);
-const logWarn = (...args) => DEBUG && console.warn(...args);
+const log = (...args) => {
+  if (DEBUG) {
+    console.log(...args);
+  }
+  // Store log entry with timestamp
+  const timestamp = new Date().toISOString();
+  const message = args.map(arg => {
+    if (typeof arg === 'object') {
+      try {
+        return JSON.stringify(arg);
+      } catch {
+        return String(arg);
+      }
+    }
+    return String(arg);
+  }).join(' ');
+  logHistory.push(`[${timestamp}] ${message}`);
+  // Keep only last MAX_LOG_HISTORY entries
+  if (logHistory.length > MAX_LOG_HISTORY) {
+    logHistory.shift();
+  }
+};
+
+const logWarn = (...args) => {
+  if (DEBUG) {
+    console.warn(...args);
+  }
+  // Store log entry with timestamp
+  const timestamp = new Date().toISOString();
+  const message = args.map(arg => {
+    if (typeof arg === 'object') {
+      try {
+        return JSON.stringify(arg);
+      } catch {
+        return String(arg);
+      }
+    }
+    return String(arg);
+  }).join(' ');
+  logHistory.push(`[${timestamp}] WARN: ${message}`);
+  // Keep only last MAX_LOG_HISTORY entries
+  if (logHistory.length > MAX_LOG_HISTORY) {
+    logHistory.shift();
+  }
+};
+
+// Capture console.error and console.log to log history
+const originalConsoleError = console.error;
+const originalConsoleLog = console.log;
+console.error = (...args) => {
+  originalConsoleError(...args);
+  // Store in log history without calling console methods to avoid recursion
+  const timestamp = new Date().toISOString();
+  const message = args.map(arg => {
+    if (typeof arg === 'object') {
+      try {
+        return JSON.stringify(arg);
+      } catch {
+        return String(arg);
+      }
+    }
+    return String(arg);
+  }).join(' ');
+  logHistory.push(`[${timestamp}] ERROR: ${message}`);
+  if (logHistory.length > MAX_LOG_HISTORY) {
+    logHistory.shift();
+  }
+};
+console.log = (...args) => {
+  originalConsoleLog(...args);
+  // Store in log history without calling console methods to avoid recursion
+  const timestamp = new Date().toISOString();
+  const message = args.map(arg => {
+    if (typeof arg === 'object') {
+      try {
+        return JSON.stringify(arg);
+      } catch {
+        return String(arg);
+      }
+    }
+    return String(arg);
+  }).join(' ');
+  logHistory.push(`[${timestamp}] ${message}`);
+  if (logHistory.length > MAX_LOG_HISTORY) {
+    logHistory.shift();
+  }
+};
 
 // Immediate test to verify script is loading
 console.log("🔵 Script.js loaded");
@@ -179,14 +268,24 @@ function initWebSocket() {
           
           // If we're the host (will be confirmed by room-info), make waiting screen semi-transparent
           // so the video shows through while keeping the link widget visible
+          // For clients joining existing room: waiting screen is already hidden, so just show local video
           if (waitingScreen && !waitingScreen.classList.contains("hidden")) {
             waitingScreen.classList.add("host-streaming");
             log("✨ Making waiting screen semi-transparent so video shows through");
           }
           
-          // Keep waiting screen visible - don't hide it yet
-          // For host: we'll keep it visible until client joins (so they can share the link)
-          // For client: it will be hidden when they connect or when room-info confirms host is active
+          // For clients: if waiting screen is hidden (joining existing room), show controls now
+          if (!isHost && waitingScreen && waitingScreen.classList.contains("hidden")) {
+            log("👤 Client: camera accepted, showing controls...");
+            if (controls) {
+              controls.style.display = "flex";
+              controls.style.visibility = "visible";
+            }
+          }
+          
+          // Keep waiting screen visible for host - don't hide it yet
+          // Host: we'll keep it visible until client joins (so they can share the link)
+          // Client: it should already be hidden if joining existing room
           
           // IMPORTANT: If we have queued signals (client received offer before stream was ready),
           // create peer connection immediately to process them
@@ -302,14 +401,12 @@ function initWebSocket() {
         }
         
         // If client joins and host is already active (totalClients > 1), hide waiting screen immediately
+        // Show empty page (no "share link" widget) - client will see their video once camera is accepted
         if (!isHost && data.totalClients > 1 && waitingScreen) {
-          log("👥 Host already active, hiding waiting screen...");
+          log("👥 Host already active, hiding waiting screen immediately (client joining existing room)...");
           waitingScreen.classList.add("hidden");
-          // Ensure controls are visible
-          if (controls) {
-            controls.style.display = "flex";
-            controls.style.visibility = "visible";
-          }
+          // Don't show controls yet - wait for camera permission
+          // Local video will be shown once getUserMedia succeeds
         }
         
         // For host: if totalClients > 1, a client has joined - hide waiting screen
@@ -1291,6 +1388,7 @@ const btnCamera = document.getElementById("btn-camera");
 btnSwitchCamera = document.getElementById("btn-switch-camera");
 const btnFullscreen = document.getElementById("btn-fullscreen");
 const btnLeave = document.getElementById("btn-leave");
+const btnCopyLogs = document.getElementById("btn-copy-logs");
 
 // Hide fullscreen button on mobile (when switch camera button is visible)
 // Fullscreen doesn't work well on mobile browsers
@@ -1415,6 +1513,38 @@ if (btnLeave) {
     setTimeout(() => {
       location.href = "/";
     }, 500);
+  });
+}
+
+if (btnCopyLogs) {
+  btnCopyLogs.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    try {
+      const logsText = logHistory.join('\n');
+      if (logsText) {
+        await navigator.clipboard.writeText(logsText);
+        log("📋 Logs copied to clipboard");
+        btnCopyLogs.textContent = "Copied!";
+        btnCopyLogs.classList.add("copied");
+        setTimeout(() => {
+          btnCopyLogs.textContent = "📋";
+          btnCopyLogs.classList.remove("copied");
+        }, 2000);
+      } else {
+        log("⚠️ No logs to copy");
+        btnCopyLogs.textContent = "No logs";
+        setTimeout(() => {
+          btnCopyLogs.textContent = "📋";
+        }, 2000);
+      }
+    } catch (err) {
+      console.error("Error copying logs:", err);
+      // Fallback: show in alert
+      const logsText = logHistory.join('\n');
+      if (logsText) {
+        prompt("Copy these logs:", logsText);
+      }
+    }
   });
 }
 

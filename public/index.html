@@ -9,10 +9,10 @@
   <link rel="alternate icon" href="/favicon.svg" />
   
   <!-- Primary Meta Tags -->
-  <title>LiteCall - Free Private Video Calls</title>
-  <meta name="title" content="LiteCall - Free Private Video Calls" />
-  <meta name="description" content="Free and secure peer-to-peer 1:1 video calls. No authentication required, no tracking, no cookies. Private, secure, and free video calling service." />
-  <meta name="keywords" content="video calls, peer to peer, free video chat, secure calls, private video calls, webRTC, online meetings, video conferencing" />
+  <title>LiteCall - Private Video Calls | No Sign-Up Required</title>
+  <meta name="title" content="LiteCall - Private Video Calls | No Sign-Up Required" />
+  <meta name="description" content="Private video calls with no sign-up, no tracking, no limits. Works when other services are unavailable. No authentication, no registration, no traces. Peer-to-peer calls with no tracking or cookies." />
+  <meta name="keywords" content="video calls when blocked, no authentication video calls, private video calls, no registration video calls, peer to peer video chat, webRTC, secure video calls, works when others blocked" />
   <meta name="author" content="Timur Nurlygaianov" />
   <meta name="robots" content="index, follow" />
   <meta name="language" content="English" />
@@ -21,15 +21,15 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://litecall.app/" />
-  <meta property="og:title" content="LiteCall - Free Private Video Calls" />
-  <meta property="og:description" content="Free and secure peer-to-peer 1:1 video calls. No authentication required, no tracking, no cookies. Private, secure, and free." />
+  <meta property="og:title" content="LiteCall - Private Video Calls | No Sign-Up Required" />
+  <meta property="og:description" content="Private video calls with no sign-up, no tracking, no limits. Works when other services are unavailable. No authentication, no registration, no traces." />
   <meta property="og:site_name" content="LiteCall" />
   
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:url" content="https://litecall.app/" />
-  <meta property="twitter:title" content="LiteCall - Free Private Video Calls" />
-  <meta property="twitter:description" content="Free and secure peer-to-peer 1:1 video calls. No authentication required, no tracking, no cookies. Private, secure, and free." />
+  <meta property="twitter:title" content="LiteCall - Private Video Calls | No Sign-Up Required" />
+  <meta property="twitter:description" content="Private video calls with no sign-up, no tracking, no limits. Works when other services are unavailable. No authentication, no registration, no traces." />
   <style>
     * {
       margin: 0;
@@ -73,47 +73,6 @@
       position: relative;
       overflow: hidden;
     }
-    
-    .page-1::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: radial-gradient(
-        circle 800px at var(--mouse-x, 50%) var(--mouse-y, 50%),
-        rgba(0, 255, 255, 0.15) 0%,
-        rgba(138, 43, 226, 0.1) 30%,
-        transparent 70%
-      );
-      pointer-events: none;
-      z-index: 1;
-      transition: background 0.4s ease-out;
-    }
-    
-    .page-1::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: radial-gradient(
-        circle 400px at var(--mouse-x, 50%) var(--mouse-y, 50%),
-        rgba(255, 0, 255, 0.08) 0%,
-        transparent 50%
-      );
-      pointer-events: none;
-      z-index: 1;
-      transition: background 0.4s ease-out;
-      opacity: 0.6;
-    }
-    
-    .page-1 > * {
-      position: relative;
-      z-index: 2;
-    }
 
     .page-2 {
       background: #0a0e27;
@@ -125,47 +84,6 @@
       position: relative;
       overflow: hidden;
     }
-    
-    .page-2::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: radial-gradient(
-        circle 800px at var(--mouse-x, 50%) var(--mouse-y, 50%),
-        rgba(0, 255, 255, 0.15) 0%,
-        rgba(138, 43, 226, 0.1) 30%,
-        transparent 70%
-      );
-      pointer-events: none;
-      z-index: 1;
-      transition: background 0.4s ease-out;
-    }
-    
-    .page-2::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: radial-gradient(
-        circle 400px at var(--mouse-x, 50%) var(--mouse-y, 50%),
-        rgba(255, 0, 255, 0.08) 0%,
-        transparent 50%
-      );
-      pointer-events: none;
-      z-index: 1;
-      transition: background 0.4s ease-out;
-      opacity: 0.6;
-    }
-    
-    .page-2 > * {
-      position: relative;
-      z-index: 2;
-    }
 
     .page-3 {
       background: #0a0e27;
@@ -176,47 +94,6 @@
       color: #e0e7ff;
       position: relative;
       overflow: hidden;
-    }
-    
-    .page-3::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: radial-gradient(
-        circle 800px at var(--mouse-x, 50%) var(--mouse-y, 50%),
-        rgba(0, 255, 255, 0.15) 0%,
-        rgba(138, 43, 226, 0.1) 30%,
-        transparent 70%
-      );
-      pointer-events: none;
-      z-index: 1;
-      transition: background 0.4s ease-out;
-    }
-    
-    .page-3::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: radial-gradient(
-        circle 400px at var(--mouse-x, 50%) var(--mouse-y, 50%),
-        rgba(255, 0, 255, 0.08) 0%,
-        transparent 50%
-      );
-      pointer-events: none;
-      z-index: 1;
-      transition: background 0.4s ease-out;
-      opacity: 0.6;
-    }
-    
-    .page-3 > * {
-      position: relative;
-      z-index: 2;
     }
 
     h1 {
@@ -268,14 +145,15 @@
     button:hover {
       transform: translateY(-3px);
       box-shadow: 
-        0 0 20px rgba(0, 255, 255, 0.6),
-        0 0 40px rgba(0, 255, 255, 0.4),
-        inset 0 0 20px rgba(0, 255, 255, 0.2);
-      background: rgba(0, 255, 255, 0.1);
+        0 0 28px rgba(255, 0, 255, 0.85),
+        0 0 56px rgba(255, 0, 255, 0.55),
+        inset 0 0 24px rgba(255, 0, 255, 0.35);
+      background: rgba(255, 0, 255, 0.12);
       border-color: #ff00ff;
       text-shadow: 
-        0 0 10px rgba(0, 255, 255, 0.8),
-        0 0 15px rgba(255, 0, 255, 0.5);
+        0 0 12px rgba(255, 0, 255, 0.9),
+        0 0 20px rgba(255, 0, 255, 0.6);
+      filter: saturate(1.4);
     }
 
     button:active {
@@ -331,6 +209,9 @@
       position: relative;
       color: #e0e7ff;
       text-shadow: 0 0 4px rgba(224, 231, 255, 0.2);
+      display: flex;
+      align-items: flex-start;
+      min-height: 1.8em;
     }
 
     .features-list li::before {
@@ -342,9 +223,9 @@
       font-size: 1.5rem;
       font-weight: bold;
       line-height: 1.8;
-      height: 1.8em;
       display: flex;
       align-items: center;
+      height: 1.8em;
       text-shadow: 
         0 0 8px rgba(0, 255, 255, 0.8),
         0 0 16px rgba(0, 255, 255, 0.4);
@@ -466,7 +347,7 @@
 <body>
   <!-- First Page -->
   <div class="page page-1">
-    <h1>Free Private Video Calls</h1>
+    <h1>Private Video Calls</h1>
     <p class="subtitle">No sign-up, no tracking, no limits.</p>
     <button id="create">Start a Call</button>
     <div id="counter"></div>
@@ -476,14 +357,15 @@
   <!-- Second Page -->
   <div class="page page-2">
     <div class="features">
-      <h2>What Is LiteCall</h2>
+      <h2>Why LiteCall</h2>
       <ul class="features-list">
-        <li>LiteCall provides free peer-to-peer 1:1 meetings</li>
-        <li>LiteCall does not require any authentification</li>
-        <li>LiteCall does not track location & user data</li>
-        <li>LiteCall does not use cookies</li>
-        <li>All calls are secure with SSL encription</li>
-        <li>So it is private, secure and free</li>
+        <li>Works when other video calling services are unavailable or blocked</li>
+        <li>No authentication required - start calling immediately without account</li>
+        <li>No registration, no email, no phone number - completely anonymous</li>
+        <li>Leaves no traces - no tracking, no cookies, no data collection</li>
+        <li>Peer-to-peer connection - your data never goes through our servers</li>
+        <li>All calls are secure with SSL encryption</li>
+        <li>Private, secure, free — and it just works</li>
       </ul>
     </div>
   </div>
@@ -524,30 +406,6 @@
 
     // Update counter once on page load (no need to keep updating)
     updateCounter();
-
-    // Mouse-reactive background effect for all pages (cyberpunk style)
-    function setupMouseReactiveBackground(pageElement) {
-      if (!pageElement) return;
-      
-      pageElement.addEventListener('mousemove', (e) => {
-        const rect = pageElement.getBoundingClientRect();
-        const x = ((e.clientX - rect.left) / rect.width) * 100;
-        const y = ((e.clientY - rect.top) / rect.height) * 100;
-        pageElement.style.setProperty('--mouse-x', `${x}%`);
-        pageElement.style.setProperty('--mouse-y', `${y}%`);
-      });
-      
-      // Reset to center when mouse leaves
-      pageElement.addEventListener('mouseleave', () => {
-        pageElement.style.setProperty('--mouse-x', '50%');
-        pageElement.style.setProperty('--mouse-y', '50%');
-      });
-    }
-    
-    // Apply to all pages
-    setupMouseReactiveBackground(document.querySelector('.page-1'));
-    setupMouseReactiveBackground(document.querySelector('.page-2'));
-    setupMouseReactiveBackground(document.querySelector('.page-3'));
 
     // Hide scroll indicator when user scrolls
     let scrollIndicator = document.querySelector('.scroll-indicator');

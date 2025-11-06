@@ -46,23 +46,6 @@ function saveCounter(count) {
   }
 }
 
-// Migrate old counter file if it exists
-const oldCallsFile = path.join(__dirname, "calls.json");
-if (fs.existsSync(oldCallsFile) && !fs.existsSync(callsFile)) {
-  try {
-    const oldData = JSON.parse(fs.readFileSync(oldCallsFile, "utf8"));
-    const oldCount = oldData.successful || 0;
-    if (oldCount > 0) {
-      saveCounter(oldCount);
-      console.log(`🔄 Migrated counter from old file: ${oldCount}`);
-      // Optionally remove old file after migration
-      // fs.unlinkSync(oldCallsFile);
-    }
-  } catch (err) {
-    console.error("❌ Error migrating old counter:", err);
-  }
-}
-
 // Load initial counter
 let callCount = loadCounter();
 console.log(`📊 Initial call count loaded: ${callCount}`);
