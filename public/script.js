@@ -1011,26 +1011,51 @@ function createPeerConnection(stream) {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
     
+    // CRITICAL FIX: Some browsers (especially mobile) don't process MediaStream
+    // until the video element is "reset". Force processing by clearing and resetting.
+    // This is a known workaround for browsers that don't progress past readyState 0.
+    log("🔄 Forcing video element to process MediaStream (workaround for readyState 0 bug)...");
+    
+    // First, ensure video is visible and has all required attributes
+    remoteVideo.style.display = "block";
+    remoteVideo.classList.add("playing");
+    
     // Set stream
     remoteVideo.srcObject = stream;
     log("📹 Remote stream set to video element");
     
-    // CRITICAL FIX: On some browsers (especially mobile), the video element needs
-    // to be explicitly told to process the MediaStream. Try playing immediately
-    // even if readyState is 0 - sometimes this forces the browser to start processing.
-    // Also ensure all attributes are set before attempting play.
-    log("🔄 Attempting immediate play to force video processing...");
-    const immediatePlayPromise = remoteVideo.play();
-    if (immediatePlayPromise !== undefined) {
-      immediatePlayPromise
-        .then(() => {
-          log("✅ Immediate play succeeded - video should start processing");
-        })
-        .catch((err) => {
-          logWarn("⚠️ Immediate play failed (expected on some browsers):", err?.name);
-          // This is expected on some browsers - the video will start when ready
-        });
-    }
+    // CRITICAL: Force browser to process the stream by:
+    // 1. Immediately trying to play (this triggers processing on some browsers)
+    // 2. If that doesn't work, reset srcObject after a brief delay
+    const forceProcess = async () => {
+      try {
+        // Try immediate play
+        log("🔄 Attempting immediate play to force processing...");
+        await remoteVideo.play();
+        log("✅ Immediate play succeeded");
+      } catch (err) {
+        logWarn("⚠️ Immediate play failed, trying reset method:", err?.name);
+        // Reset method: clear and reset srcObject to force processing
+        const currentStream = remoteVideo.srcObject;
+        remoteVideo.srcObject = null;
+        // Use requestAnimationFrame to ensure DOM update
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        remoteVideo.srcObject = currentStream;
+        log("🔄 Stream reset - attempting play again...");
+        // Try playing again after reset
+        setTimeout(async () => {
+          try {
+            await remoteVideo.play();
+            log("✅ Play succeeded after reset");
+          } catch (retryErr) {
+            logWarn("⚠️ Play failed after reset:", retryErr?.name);
+          }
+        }, 100);
+      }
+    };
+    
+    // Execute immediately
+    forceProcess();
     
     // Monitor stream for track changes
     stream.onaddtrack = (event) => {
