@@ -98,9 +98,24 @@ console.log = (...args) => {
 console.log("🔵 Script.js loaded");
 
 // ====== Configuration ======
+// Detect mobile device
+const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                       (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+
 const CONFIG = {
-  // Media constraints
-  VIDEO: { width: { ideal: 1280 }, height: { ideal: 720 } },
+  // Media constraints - better quality for mobile
+  VIDEO: isMobileDevice 
+    ? { 
+        width: { ideal: 1280, max: 1920 },
+        height: { ideal: 720, max: 1080 },
+        frameRate: { ideal: 30, max: 30 },
+        facingMode: { ideal: "user" }
+      }
+    : { 
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+        frameRate: { ideal: 30 }
+      },
   AUDIO: {
     echoCancellation: true,
     noiseSuppression: true,
@@ -895,9 +910,40 @@ function createPeerConnection(stream) {
   peer.on("connect", () => {
     log("✅ Peer connected!");
     hasConnected = true; // Mark that we've successfully connected
+    
+    // Set bitrate when connection is established for better quality
+    setTimeout(() => {
+      if (peer && peer._pc) {
+        const senders = peer._pc.getSenders();
+        senders.forEach(sender => {
+          if (sender.track && sender.track.kind === 'video') {
+            try {
+              const params = sender.getParameters();
+              if (!params.encodings) {
+                params.encodings = [{}];
+              }
+              // Set bitrate based on device type
+              // Mobile: 2-3 Mbps, Desktop: 3-5 Mbps
+              const maxBitrate = isMobileDevice ? 3000000 : 5000000; // 3-5 Mbps
+              const minBitrate = isMobileDevice ? 500000 : 1000000; // 0.5-1 Mbps
+              params.encodings[0].maxBitrate = maxBitrate;
+              params.encodings[0].minBitrate = minBitrate;
+              params.encodings[0].maxFramerate = 30;
+              sender.setParameters(params).then(() => {
+                log(`✅ Video bitrate set on connect: min=${minBitrate/1000}kbps, max=${maxBitrate/1000}kbps`);
+              }).catch(err => {
+                logWarn("⚠️ Failed to set video bitrate on connect:", err);
+              });
+            } catch (err) {
+              logWarn("⚠️ Error setting video bitrate on connect:", err);
+            }
+          }
+        });
+      }
+    }, 500);
   });
 
-  peer.on("stream", (stream) => {
+  peer.on("stream", async (stream) => {
     log("🎬 Remote stream received");
     
     // Log stream details for debugging
@@ -922,6 +968,21 @@ function createPeerConnection(stream) {
     remoteVideo.setAttribute("webkit-playsinline", "true");
     remoteVideo.setAttribute("autoplay", "true");
     
+    // IMPORTANT: Clear previous stream first to prevent frozen frames
+    // This fixes the race condition where video freezes on one frame
+    if (remoteVideo.srcObject && remoteVideo.srcObject !== stream) {
+      log("🧹 Clearing previous remote stream to prevent frozen frames");
+      const oldStream = remoteVideo.srcObject;
+      remoteVideo.srcObject = null;
+      // Stop all tracks from old stream
+      oldStream.getTracks().forEach(track => {
+        track.stop();
+        log(`🛑 Stopped old ${track.kind} track`);
+      });
+      // Small delay to ensure cleanup
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
     // Set stream
     remoteVideo.srcObject = stream;
     log("📹 Remote stream set to video element");
@@ -929,10 +990,33 @@ function createPeerConnection(stream) {
     // Monitor stream for track changes
     stream.onaddtrack = (event) => {
       log(`➕ Track added to remote stream: ${event.track.kind} (${event.track.label || 'unnamed'})`);
+      // If video track is added, ensure video element is updated
+      if (event.track.kind === 'video' && remoteVideo.srcObject === stream) {
+        log("🔄 Video track added - refreshing video element");
+        // Force video element to reload
+        remoteVideo.load();
+        remoteVideo.play().catch(err => {
+          logWarn("⚠️ Failed to play after track add:", err);
+        });
+      }
     };
     stream.onremovetrack = (event) => {
       logWarn(`➖ Track removed from remote stream: ${event.track.kind} (${event.track.label || 'unnamed'})`);
     };
+    
+    // Monitor video track for mute/unmute and enabled state changes
+    if (videoTracks.length > 0) {
+      const videoTrack = videoTracks[0];
+      videoTrack.onmute = () => {
+        logWarn("⚠️ Remote video track muted");
+      };
+      videoTrack.onunmute = () => {
+        log("✅ Remote video track unmuted");
+      };
+      videoTrack.onended = () => {
+        logWarn("⚠️ Remote video track ended");
+      };
+    }
     
     // On mobile, videos need to be muted initially to autoplay (browser autoplay policy)
     // Start muted to ensure autoplay works
@@ -1113,8 +1197,35 @@ function createPeerConnection(stream) {
     remoteVideo.addEventListener("loadeddata", videoPlayingHandler, { once: true });
     
     // Also listen for timeupdate - this means video is actually playing
+    let lastCurrentTime = 0;
+    let frozenFrameDetected = false;
     remoteVideo.addEventListener("timeupdate", () => {
       if (!remoteVideo.paused && remoteVideo.currentTime > 0) {
+        // Detect if video is frozen (time not advancing)
+        if (remoteVideo.currentTime === lastCurrentTime && lastCurrentTime > 0) {
+          if (!frozenFrameDetected) {
+            frozenFrameDetected = true;
+            logWarn("⚠️ Possible frozen frame detected - currentTime not advancing");
+            // Try to force video refresh
+            setTimeout(() => {
+              if (remoteVideo.currentTime === lastCurrentTime) {
+                logWarn("🔄 Video still frozen - attempting to refresh");
+                const currentSrc = remoteVideo.srcObject;
+                remoteVideo.srcObject = null;
+                setTimeout(() => {
+                  remoteVideo.srcObject = currentSrc;
+                  remoteVideo.play().catch(err => {
+                    logWarn("⚠️ Failed to play after refresh:", err);
+                  });
+                }, 100);
+              }
+            }, 1000);
+          }
+        } else {
+          frozenFrameDetected = false;
+        }
+        lastCurrentTime = remoteVideo.currentTime;
+        
         log("✅ Remote video timeupdate - video is playing (currentTime: " + remoteVideo.currentTime.toFixed(2) + "s)");
         if (videoPlayingHandler) {
           videoPlayingHandler();
@@ -1335,6 +1446,38 @@ function createPeerConnection(stream) {
   // For non-initiator (client), this prepares peer to receive offer
   peer.addStream(stream);
   log("📹 Stream added to peer connection");
+  
+  // Set bitrate for better quality, especially on mobile
+  // This needs to be done after the peer connection is established
+  setTimeout(() => {
+    if (peer && peer._pc) {
+      const senders = peer._pc.getSenders();
+      senders.forEach(sender => {
+        if (sender.track && sender.track.kind === 'video') {
+          try {
+            const params = sender.getParameters();
+            if (!params.encodings) {
+              params.encodings = [{}];
+            }
+            // Set bitrate based on device type
+            // Mobile: 2-3 Mbps, Desktop: 3-5 Mbps
+            const maxBitrate = isMobileDevice ? 3000000 : 5000000; // 3-5 Mbps
+            const minBitrate = isMobileDevice ? 500000 : 1000000; // 0.5-1 Mbps
+            params.encodings[0].maxBitrate = maxBitrate;
+            params.encodings[0].minBitrate = minBitrate;
+            params.encodings[0].maxFramerate = 30;
+            sender.setParameters(params).then(() => {
+              log(`✅ Video bitrate set: min=${minBitrate/1000}kbps, max=${maxBitrate/1000}kbps`);
+            }).catch(err => {
+              logWarn("⚠️ Failed to set video bitrate:", err);
+            });
+          } catch (err) {
+            logWarn("⚠️ Error setting video bitrate:", err);
+          }
+        }
+      });
+    }
+  }, 1000); // Wait a bit for connection to be ready
   
   // If we're the initiator (host), SimplePeer will automatically generate an offer
   // If we're not the initiator (client), we wait for the offer from the host
