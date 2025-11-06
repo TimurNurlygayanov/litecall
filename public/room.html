@@ -121,6 +121,17 @@
       pointer-events: none;
       display: none; /* Completely remove from layout when hidden */
     }
+    
+    /* Ensure controls are hidden initially until JS loads and shows them */
+    #controls {
+      display: none !important; /* Force hidden until JS explicitly shows it */
+    }
+    
+    /* Ensure video elements are hidden initially until JS loads and shows them */
+    #remote,
+    #local {
+      display: none !important; /* Force hidden until JS explicitly shows it */
+    }
 
     /* When host is streaming, make background semi-transparent so video shows through */
     #waiting-screen.host-streaming {
@@ -408,7 +419,8 @@
     </button>
   </div>
 
-  <script src="https://unpkg.com/simple-peer/simplepeer.min.js"></script>
+  <!-- Scripts loaded asynchronously to prevent blocking page render -->
+  <script src="https://unpkg.com/simple-peer/simplepeer.min.js" defer></script>
   <script src="script.js" defer></script>
 </body>
 </html>
