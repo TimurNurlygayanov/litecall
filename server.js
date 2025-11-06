@@ -52,6 +52,7 @@ console.log(`📊 Initial call count loaded: ${callCount}`);
 
 const connections = {}; // roomId -> [clients]
 const lastSignals = {}; // roomId -> last offer/answer
+const recentCandidates = {}; // roomId -> [recent ICE candidates from host] (for late-joining clients)
 const hosts = {}; // roomId -> first client WebSocket (the host)
 
 
@@ -161,6 +162,23 @@ wss.on("connection", (ws, req) => {
   if (lastSignals[roomId]) {
     console.log(`📤 Sending stored signal (${lastSignals[roomId].type}) to new peer in room ${roomId}`);
     ws.send(JSON.stringify(lastSignals[roomId]));
+    
+    // Also send any stored ICE candidates from the host (for late-joining clients)
+    // This fixes the race condition where host sends candidates before client joins
+    if (recentCandidates[roomId] && recentCandidates[roomId].length > 0) {
+      console.log(`📤 Sending ${recentCandidates[roomId].length} stored candidates to new client in room ${roomId}`);
+      // Send candidates with a small delay to ensure offer is processed first
+      setTimeout(() => {
+        recentCandidates[roomId].forEach((candidate, index) => {
+          try {
+            ws.send(JSON.stringify(candidate));
+            console.log(`📤 Sent stored candidate ${index + 1}/${recentCandidates[roomId].length} to new client`);
+          } catch (err) {
+            console.error(`❌ Error sending stored candidate:`, err);
+          }
+        });
+      }, 100); // Small delay to ensure offer is processed first
+    }
   }
 
   ws.on("message", (msg) => {
@@ -193,8 +211,25 @@ wss.on("connection", (ws, req) => {
       // When a client reconnects, they need the offer from the host, not their previous answer
       if (parsed.type === "offer") {
         lastSignals[roomId] = parsed;
+        // Clear old candidates when a new offer is generated
+        recentCandidates[roomId] = [];
         console.log(`💾 Stored offer for room ${roomId}`);
       }
+      
+      // Store recent ICE candidates from the host (for late-joining clients)
+      // Only store candidates from the host (first client), not from clients
+      if (parsed.type === "candidate" && hosts[roomId] === ws) {
+        if (!recentCandidates[roomId]) {
+          recentCandidates[roomId] = [];
+        }
+        // Keep only the last 20 candidates to avoid memory issues
+        recentCandidates[roomId].push(parsed);
+        if (recentCandidates[roomId].length > 20) {
+          recentCandidates[roomId].shift(); // Remove oldest
+        }
+        console.log(`💾 Stored candidate from host for room ${roomId} (${recentCandidates[roomId].length} total)`);
+      }
+      
       // Answers are relayed but not stored - they're only valid for the current connection
 
       // Relay to other peers
@@ -227,11 +262,13 @@ wss.on("connection", (ws, req) => {
     if (wasHost) {
       // If host disconnected, clear stored signals (host will generate new offer when reconnecting client joins)
       delete lastSignals[roomId];
-      console.log(`🧹 Cleared stored signals for room "${roomId}" (host disconnected)`);
+      delete recentCandidates[roomId];
+      console.log(`🧹 Cleared stored signals and candidates for room "${roomId}" (host disconnected)`);
     } else {
       // If client disconnected, also clear stored signals so reconnecting client gets fresh offer from host
       delete lastSignals[roomId];
-      console.log(`🧹 Cleared stored signals for room "${roomId}" (client disconnected - will get fresh offer on reconnect)`);
+      delete recentCandidates[roomId];
+      console.log(`🧹 Cleared stored signals and candidates for room "${roomId}" (client disconnected - will get fresh offer on reconnect)`);
     }
     
     if (connections[roomId].length === 0) {

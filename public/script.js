@@ -365,6 +365,11 @@ function initWebSocket() {
     try {
       const data = JSON.parse(event.data);
       
+      // Log all incoming WebSocket messages for debugging (except room-info to reduce noise)
+      if (data.type !== "room-info") {
+        log(`📨 Received WebSocket message: ${data.type || 'unknown'} (${JSON.stringify(data).length} bytes)`);
+      }
+      
       // Handle room-info message from server
       if (data.type === "room-info") {
         const wasHost = isHost;
@@ -549,8 +554,29 @@ function initWebSocket() {
         }
         // Queue signal for processing after peer recreation
         log(`📋 Queueing signal for processing after peer recreation: ${data.type || "candidate"}`);
-        if (!queuedIncomingSignals.includes(data)) {
-          queuedIncomingSignals.push(data);
+        // For candidates, check if we already have this exact candidate to avoid duplicates
+        if (data.type === "candidate") {
+          const candidateStr = data.candidate?.candidate || '';
+          const isDuplicate = queuedIncomingSignals.some(s => 
+            s.type === "candidate" && s.candidate?.candidate === candidateStr
+          );
+          if (!isDuplicate) {
+            queuedIncomingSignals.push(data);
+            log(`📋 Queued candidate: ${candidateStr.substring(0, 50)}...`);
+          } else {
+            log(`⚠️ Skipping duplicate candidate: ${candidateStr.substring(0, 50)}...`);
+          }
+        } else {
+          // For non-candidate signals, check if we already have this signal
+          const isDuplicate = queuedIncomingSignals.some(s => 
+            s.type === data.type && 
+            (data.type === "offer" || data.type === "answer" ? s.sdp === data.sdp : false)
+          );
+          if (!isDuplicate) {
+            queuedIncomingSignals.push(data);
+          } else {
+            log(`⚠️ Skipping duplicate signal: ${data.type}`);
+          }
         }
         // Recreate peer if we have a stream
         if (localStream) {
