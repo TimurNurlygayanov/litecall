@@ -261,9 +261,25 @@ function initWebSocket() {
           localVideo.srcObject = stream;
           log("🎥 Local stream ready");
           
-          // Show local video widget immediately
+          // On mobile, ensure local video has proper attributes for autoplay
           if (localVideo) {
+            localVideo.setAttribute("playsinline", "true");
+            localVideo.setAttribute("webkit-playsinline", "true");
             localVideo.style.display = "block";
+            
+            // Ensure local video plays on mobile
+            const localPlayPromise = localVideo.play();
+            if (localPlayPromise !== undefined) {
+              localPlayPromise.catch((err) => {
+                logWarn("⚠️ Local video play failed (will retry):", err);
+                // Retry after a short delay
+                setTimeout(() => {
+                  localVideo.play().catch((retryErr) => {
+                    logWarn("⚠️ Local video retry play failed:", retryErr);
+                  });
+                }, 500);
+              });
+            }
           }
           
           // If we're the host (will be confirmed by room-info), make waiting screen semi-transparent
@@ -853,6 +869,10 @@ function createPeerConnection(stream) {
       remoteVideo.removeEventListener("canplay", videoPlayingHandler);
     }
     
+    // On mobile, ensure video element has proper attributes for autoplay
+    remoteVideo.setAttribute("playsinline", "true");
+    remoteVideo.setAttribute("webkit-playsinline", "true");
+    
     // Try to play immediately (muted for autoplay)
     const playPromise = remoteVideo.play();
     if (playPromise !== undefined) {
@@ -863,18 +883,34 @@ function createPeerConnection(stream) {
           setTimeout(() => {
             if (remoteVideo.muted) {
               remoteVideo.muted = false;
-              remoteVideo.play().catch(() => {
+              remoteVideo.play().catch((err) => {
                 // Silent fail - video is playing muted, user may need to interact
-                logWarn("⚠️ Remote video remains muted due to autoplay policy");
+                logWarn("⚠️ Remote video remains muted due to autoplay policy:", err);
               });
             }
           }, 500);
         })
         .catch(err => {
-          console.error("Error playing remote video:", err);
-          // Video element is already set to muted, so it should play
-          // If it still fails, the issue is likely something else
+          logWarn("⚠️ Error playing remote video (will retry):", err);
+          // On mobile, video might need user interaction - try again after a short delay
+          // Also ensure video is properly loaded
+          setTimeout(() => {
+            if (remoteVideo.readyState >= 2) { // HAVE_CURRENT_DATA or higher
+              remoteVideo.play().catch((retryErr) => {
+                logWarn("⚠️ Retry play failed:", retryErr);
+                // Video might need user interaction on mobile - log for debugging
+                log("📱 Mobile: Video may require user interaction to play");
+              });
+            }
+          }, 1000);
         });
+    } else {
+      // Fallback: try to play after a short delay
+      setTimeout(() => {
+        remoteVideo.play().catch((err) => {
+          logWarn("⚠️ Fallback play failed:", err);
+        });
+      }, 100);
     }
     
     // Listen for when video actually starts playing to ensure smooth transition
@@ -1083,9 +1119,11 @@ function createPeerConnection(stream) {
 }
 
 // ====== Waiting Screen Setup ======
+// Set up meeting link immediately when page loads (room ID is known from URL)
 if (meetingLinkInput) {
   const meetingUrl = `${window.location.origin}/room?id=${room}`;
   meetingLinkInput.value = meetingUrl;
+  log("🔗 Meeting link ready:", meetingUrl);
 }
 
 if (copyLinkBtn && meetingLinkInput) {
@@ -1165,17 +1203,22 @@ async function switchToCamera(deviceId) {
     log(`📹 Switching to camera: ${deviceId}`);
     
     // Get new video track with selected camera
-    // On mobile, we need to be more flexible with deviceId constraints
-    // Try with ideal first (more flexible), then fall back to exact if needed
+    // IMPORTANT: We already have camera permission from the initial getUserMedia call
+    // Browsers should reuse existing permission without prompting again
+    // Only request video (no audio) to ensure we're reusing permission, not requesting new one
     let newStream;
     try {
       // First try with ideal constraint (more flexible, works better on mobile)
+      // Only request video - no audio property at all (not even audio: false)
+      // This ensures browsers recognize this as reusing existing permission
       newStream = await navigator.mediaDevices.getUserMedia({
         video: { 
           deviceId: { ideal: deviceId },
-          ...CONFIG.VIDEO
-        },
-        audio: false, // Don't request audio - we'll keep the existing audio track
+          width: CONFIG.VIDEO.width,
+          height: CONFIG.VIDEO.height
+        }
+        // Explicitly omit audio - we already have an audio track from the initial stream
+        // Not including audio property at all helps browsers recognize this as permission reuse
       });
       
       // Verify we got the correct camera
@@ -1186,24 +1229,43 @@ async function switchToCamera(deviceId) {
         // Stop the wrong stream
         newStream.getTracks().forEach(track => track.stop());
         // Try with exact constraint
+        // Only request video - no audio property
         newStream = await navigator.mediaDevices.getUserMedia({
           video: { 
             deviceId: { exact: deviceId },
-            ...CONFIG.VIDEO
-          },
-          audio: false,
+            width: CONFIG.VIDEO.width,
+            height: CONFIG.VIDEO.height
+          }
+          // No audio property - reusing existing permission
         });
       }
     } catch (err) {
       // If ideal failed, try exact constraint
       logWarn("⚠️ Ideal constraint failed, trying exact...");
-      newStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          deviceId: { exact: deviceId },
-          ...CONFIG.VIDEO
-        },
-        audio: false,
-      });
+      try {
+        // Only request video - no audio property
+        newStream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            deviceId: { exact: deviceId },
+            width: CONFIG.VIDEO.width,
+            height: CONFIG.VIDEO.height
+          }
+          // No audio property - reusing existing permission
+        });
+      } catch (exactErr) {
+        // If exact also fails, try minimal constraints (mobile fallback)
+        logWarn("⚠️ Exact constraint failed, trying minimal constraints (mobile fallback)...");
+        logWarn("⚠️ Exact error:", exactErr?.name, exactErr?.message);
+        // Minimal constraints fallback - only video, no audio
+        newStream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            deviceId: deviceId, // Simple deviceId without ideal/exact
+            width: { ideal: 640 }, // Lower resolution for mobile
+            height: { ideal: 480 }
+          }
+          // No audio property - reusing existing permission
+        });
+      }
     }
     
     const newVideoTrack = newStream.getVideoTracks()[0];
@@ -1265,8 +1327,75 @@ async function switchToCamera(deviceId) {
     
     log(`📹 Switched to camera: ${availableCameras.find(cam => cam.deviceId === deviceId)?.label || 'Camera'}`);
   } catch (err) {
-    console.error("Error switching camera:", err);
-    alert("Failed to switch camera. Please try again.");
+    // Log detailed error information
+    const errorDetails = {
+      name: err?.name || 'Unknown',
+      message: err?.message || String(err),
+      code: err?.code || 'N/A',
+      constraint: err?.constraint || 'N/A',
+      deviceId: deviceId
+    };
+    logWarn("❌ Error switching camera:", errorDetails);
+    console.error("Error switching camera - details:", errorDetails);
+    console.error("Error switching camera - full error:", err);
+    
+    // Provide user-friendly error message
+    let errorMessage = "Failed to switch camera.";
+    if (err?.name === "NotReadableError" || err?.name === "TrackStartError") {
+      errorMessage = "Camera is in use by another application. Please close other apps using the camera and try again.";
+    } else if (err?.name === "NotFoundError" || err?.name === "DevicesNotFoundError") {
+      errorMessage = "Camera not found. The selected camera may have been disconnected.";
+    } else if (err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError") {
+      errorMessage = "Camera permission denied. Please allow camera access and try again.";
+    } else if (err?.name === "OverconstrainedError") {
+      errorMessage = "Camera constraints not supported. Trying a different approach...";
+      // Try with minimal constraints as fallback
+      try {
+        log("🔄 Trying fallback: minimal constraints...");
+        const fallbackStream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: deviceId },
+          audio: false,
+        });
+        const fallbackTrack = fallbackStream.getVideoTracks()[0];
+        if (fallbackTrack) {
+          // Use the fallback track
+          const audioTrack = localStream.getAudioTracks()[0];
+          const updatedStream = new MediaStream();
+          updatedStream.addTrack(fallbackTrack);
+          if (audioTrack) {
+            updatedStream.addTrack(audioTrack);
+          }
+          
+          if (peer && peer._pc) {
+            const sender = peer._pc.getSenders().find(s => 
+              s.track && s.track.kind === 'video'
+            );
+            if (sender) {
+              await sender.replaceTrack(fallbackTrack);
+            }
+          }
+          
+          const oldVideoTrack = localStream.getVideoTracks()[0];
+          if (oldVideoTrack) {
+            oldVideoTrack.stop();
+          }
+          
+          localStream = updatedStream;
+          localVideo.srcObject = updatedStream;
+          fallbackStream.getTracks().forEach(track => {
+            if (track !== fallbackTrack) {
+              track.stop();
+            }
+          });
+          log("✅ Camera switched using fallback method");
+          return; // Success with fallback
+        }
+      } catch (fallbackErr) {
+        logWarn("❌ Fallback method also failed:", fallbackErr?.message || fallbackErr);
+      }
+    }
+    
+    alert(errorMessage);
   }
 }
 

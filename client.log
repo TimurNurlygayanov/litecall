@@ -1,0 +1,66 @@
+[2025-11-06T07:20:02.445Z] 🔵 Script.js loaded
+[2025-11-06T07:20:02.449Z] 🔵 Room ID: qocues
+[2025-11-06T07:20:02.452Z] 📱 Mobile device detected - hiding fullscreen button
+[2025-11-06T07:20:02.452Z] 📱 Mobile device detected - hiding fullscreen button
+[2025-11-06T07:20:02.452Z] 🔵 Starting WebSocket connection...
+[2025-11-06T07:20:03.262Z] ✅ WS open
+[2025-11-06T07:20:03.262Z] ✅ WS open
+[2025-11-06T07:20:03.262Z] 🎥 Starting media stream immediately...
+[2025-11-06T07:20:03.262Z] 🎥 Starting media stream immediately...
+[2025-11-06T07:20:03.269Z] 📋 Room info: isFirst=false, totalClients=2, newClientJoined=false
+[2025-11-06T07:20:03.269Z] 📋 Room info: isFirst=false, totalClients=2, newClientJoined=false
+[2025-11-06T07:20:03.269Z] 👤 Role: Client (was Client)
+[2025-11-06T07:20:03.269Z] 👤 Role: Client (was Client)
+[2025-11-06T07:20:03.269Z] 👥 Host already active, hiding waiting screen immediately (client joining existing room)...
+[2025-11-06T07:20:03.269Z] 👥 Host already active, hiding waiting screen immediately (client joining existing room)...
+[2025-11-06T07:20:03.271Z] 🕓 No valid peer exists. Signal type: offer, isHost: false, hasLocalStream: false
+[2025-11-06T07:20:03.271Z] 🕓 No valid peer exists. Signal type: offer, isHost: false, hasLocalStream: false
+[2025-11-06T07:20:03.272Z] 🕓 Incoming signal queued (peer not ready yet): offer
+[2025-11-06T07:20:03.272Z] 🕓 Incoming signal queued (peer not ready yet): offer
+[2025-11-06T07:20:03.272Z] 📋 Total queued signals: 1
+[2025-11-06T07:20:03.272Z] 📋 Total queued signals: 1
+[2025-11-06T07:20:03.272Z] ⚙️ Starting peer setup to process queued signals...
+[2025-11-06T07:20:03.272Z] ⚙️ Starting peer setup to process queued signals...
+[2025-11-06T07:20:03.273Z] 🎥 Media request already in progress, will create peer when stream is ready
+[2025-11-06T07:20:03.273Z] 🎥 Media request already in progress, will create peer when stream is ready
+[2025-11-06T07:20:05.079Z] 🎥 Local stream ready
+[2025-11-06T07:20:05.079Z] 🎥 Local stream ready
+[2025-11-06T07:20:05.080Z] 👤 Client: camera accepted, showing controls...
+[2025-11-06T07:20:05.081Z] 👤 Client: camera accepted, showing controls...
+[2025-11-06T07:20:05.081Z] ⚡ Stream ready with 1 queued signals - creating peer immediately...
+[2025-11-06T07:20:05.081Z] ⚡ Stream ready with 1 queued signals - creating peer immediately...
+[2025-11-06T07:20:05.083Z] 🔧 Creating peer connection. isHost = false initiator = false
+[2025-11-06T07:20:05.083Z] 🔧 Creating peer connection. isHost = false initiator = false
+[2025-11-06T07:20:05.118Z] 🔧 New peer created. Initiator = false
+[2025-11-06T07:20:05.118Z] 🔧 New peer created. Initiator = false
+[2025-11-06T07:20:05.128Z] 📹 Stream added to peer connection
+[2025-11-06T07:20:05.128Z] 📹 Stream added to peer connection
+[2025-11-06T07:20:05.128Z] 📥 Client: Waiting for offer from host...
+[2025-11-06T07:20:05.128Z] 📥 Client: Waiting for offer from host...
+[2025-11-06T07:20:05.128Z] ⚡ Processing 1 queued signals immediately...
+[2025-11-06T07:20:05.128Z] ⚡ Processing 1 queued signals immediately...
+[2025-11-06T07:20:05.128Z] 📋 Queued signals: offer
+[2025-11-06T07:20:05.128Z] 📋 Queued signals: offer
+[2025-11-06T07:20:05.128Z] 📥 Processing queued signal 1/1: offer
+[2025-11-06T07:20:05.128Z] 📥 Processing queued signal 1/1: offer
+[2025-11-06T07:20:05.130Z] ✅ Successfully processed queued signal: offer
+[2025-11-06T07:20:05.130Z] ✅ Successfully processed queued signal: offer
+[2025-11-06T07:20:05.130Z] ✅ Finished processing 1/1 queued signals
+[2025-11-06T07:20:05.130Z] ✅ Finished processing 1/1 queued signals
+[2025-11-06T07:20:05.147Z] 🎬 Remote stream received
+[2025-11-06T07:20:05.147Z] 🎬 Remote stream received
+[2025-11-06T07:20:05.206Z] 📤 Sending signal: answer {"type":"answer","sdp":"v=0\r\no=- 6195832605923109913 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0 1 2\r\na=extmap-allow-mixed\r\na=msid-semantic: WMS 16e6bd5a-b74f-428d-aa9f-f93647825400\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111 63 9 0 8 13 110 126\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP40.0.0.0\r\na=ice-ufrag:EFpC\r\na=ice-pwd:WjgMyF002/W7Dee9ugvIeXUi\r\na=ice-options:trickle\r\na=fingerprint:sha-256 79:66:CC:0B:A9:74:A7:C9:D1:69:95:DA:88:9B:1A:EA:DE:B1:D2:7D:95:9D:60:38:C0:E1:51:3D:35:0C:97:BD\r\na=setup:active\r\na=mid:0\r\na=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level\r\na=extmap:2 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\r\na=extmap:3 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01\r\na=extmap:4 urn:ietf:params:rtp-hdrext:sdes:mid\r\na=sendrecv\r\na=msid:16e6bd5a-b74f-428d-aa9f-f93647825400 e17d4a6a-825e-497f-b182-3a00639f8b0b\r\na=rtcp-mux\r\na=rtcp-rsize\r\na=rtpmap:111 opus/48000/2\r\na=rtcp-fb:111 transport-cc\r\na=fmtp:111 minptime=10;useinbandfec=1\r\na=rtpmap:63 red/48000/2\r\na=fmtp:63 111/111\r\na=rtpmap:9 G722/8000\r\na=rtpmap:0 PCMU/8000\r\na=rtpmap:8 PCMA/8000\r\na=rtpmap:13 CN/8000\r\na=rtpmap:110 telephone-event/48000\r\na=rtpmap:126 telephone-event/8000\r\na=ssrc:2365924891 cname:mResMgGcC5Hvk6QD\r\nm=video 9 UDP/TLS/RTP/SAVPF 96 97 109 114 117 118 45 46 98 99 119 120 49 50 123 124 125\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:EFpC\r\na=ice-pwd:WjgMyF002/W7Dee9ugvIeXUi\r\na=ice-options:trickle\r\na=fingerprint:sha-256 79:66:CC:0B:A9:74:A7:C9:D1:69:95:DA:88:9B:1A:EA:DE:B1:D2:7D:95:9D:60:38:C0:E1:51:3D:35:0C:97:BD\r\na=setup:active\r\na=mid:1\r\na=extmap:14 urn:ietf:params:rtp-hdrext:toffset\r\na=extmap:2 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\r\na=extmap:13 urn:3gpp:video-orientation\r\na=extmap:3 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01\r\na=extmap:5 http://www.webrtc.org/experiments/rtp-hdrext/playout-delay\r\na=extmap:6 http://www.webrtc.org/experiments/rtp-hdrext/video-content-type\r\na=extmap:7 http://www.webrtc.org/experiments/rtp-hdrext/video-timing\r\na=extmap:8 http://www.webrtc.org/experiments/rtp-hdrext/color-space\r\na=extmap:4 urn:ietf:params:rtp-hdrext:sdes:mid\r\na=extmap:10 urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id\r\na=extmap:11 urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id\r\na=sendrecv\r\na=msid:16e6bd5a-b74f-428d-aa9f-f93647825400 9bc6cae3-dc80-4809-b4c8-c493047189dc\r\na=rtcp-mux\r\na=rtcp-rsize\r\na=rtpmap:96 VP8/90000\r\na=rtcp-fb:96 goog-remb\r\na=rtcp-fb:96 transport-cc\r\na=rtcp-fb:96 ccm fir\r\na=rtcp-fb:96 nack\r\na=rtcp-fb:96 nack pli\r\na=rtpmap:97 rtx/90000\r\na=fmtp:97 apt=96\r\na=rtpmap:109 H264/90000\r\na=rtcp-fb:109 goog-remb\r\na=rtcp-fb:109 transport-cc\r\na=rtcp-fb:109 ccm fir\r\na=rtcp-fb:109 nack\r\na=rtcp-fb:109 nack pli\r\na=fmtp:109 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f\r\na=rtpmap:114 rtx/90000\r\na=fmtp:114 apt=109\r\na=rtpmap:117 H264/90000\r\na=rtcp-fb:117 goog-remb\r\na=rtcp-fb:117 transport-cc\r\na=rtcp-fb:117 ccm fir\r\na=rtcp-fb:117 nack\r\na=rtcp-fb:117 nack pli\r\na=fmtp:117 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=4d001f\r\na=rtpmap:118 rtx/90000\r\na=fmtp:118 apt=117\r\na=rtpmap:45 AV1/90000\r\na=rtcp-fb:45 goog-remb\r\na=rtcp-fb:45 transport-cc\r\na=rtcp-fb:45 ccm fir\r\na=rtcp-fb:45 nack\r\na=rtcp-fb:45 nack pli\r\na=fmtp:45 level-idx=5;profile=0;tier=0\r\na=rtpmap:46 rtx/90000\r\na=fmtp:46 apt=45\r\na=rtpmap:98 VP9/90000\r\na=rtcp-fb:98 goog-remb\r\na=rtcp-fb:98 transport-cc\r\na=rtcp-fb:98 ccm fir\r\na=rtcp-fb:98 nack\r\na=rtcp-fb:98 nack pli\r\na=fmtp:98 profile-id=0\r\na=rtpmap:99 rtx/90000\r\na=fmtp:99 apt=98\r\na=rtpmap:119 H264/90000\r\na=rtcp-fb:119 goog-remb\r\na=rtcp-fb:119 transport-cc\r\na=rtcp-fb:119 ccm fir\r\na=rtcp-fb:119 nack\r\na=rtcp-fb:119 nack pli\r\na=fmtp:119 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=64001f\r\na=rtpmap:120 rtx/90000\r\na=fmtp:120 apt=119\r\na=rtpmap:49 H265/90000\r\na=rtcp-fb:49 goog-remb\r\na=rtcp-fb:49 transport-cc\r\na=rtcp-fb:49 ccm fir\r\na=rtcp-fb:49 nack\r\na=rtcp-fb:49 nack pli\r\na=fmtp:49 level-id=93;profile-id=1;tier-flag=0;tx-mode=SRST\r\na=rtpmap:50 rtx/90000\r\na=fmtp:50 apt=49\r\na=rtpmap:123 red/90000\r\na=rtpmap:124 rtx/90000\r\na=fmtp:124rtx/90000\r\na=fmtp:46 apt=45\r\na=rtpmap:98 VP9/90000\r\na=rtcp-fb:98 goog-remb\r\na=rtcp-fb:98 transport-cc\r\na=rtcp-fb:98 ccm fir\r\na=rtcp-fb:98 nack\r\na=rtcp-fb:98 nack pli\r\na=fmtp:98 profile-id=0\r\na=rtpmap:99 rtx/90000\r\na=fmtp:99 apt=98\r\na=rtpmap:119 H264/90000\r\na=rtcp-fb:119 goog-remb\r\na=rtcp-fb:119 transport-cc\r\na=rtcp-fb:119 ccm fir\r\na=rtcp-fb:119 nack\r\na=rtcp-fb:119 nack pli\r\na=fmtp:119 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=64001f\r\na=rtpmap:120 rtx/90000\r\na=fmtp:120 apt=119\r\na=rtpmap:49 H265/90000\r\na=rtcp-fb:49 goog-remb\r\na=rtcp-fb:49 transport-cc\r\na=rtcp-fb:49 ccm fir\r\na=rtcp-fb:49 nack\r\na=rtcp-fb:49 nack pli\r\na=fmtp:49 level-id=93;profile-id=1;tier-flag=0;tx-mode=SRST\r\na=rtpmap:50 rtx/90000\r\na=fmtp:50 apt=49\r\na=rtpmap:123 red/90000\r\na=rtpmap:124 rtx/90000\r\na=fmtp:124 apt=123\r\na=rtpmap:125 ulpfec/90000\r\na=ssrc-group:FID 1690685519 1021026397\r\na=ssrc:1690685519 cname:mResMgGcC5Hvk6QD\r\na=ssrc:1021026397 cname:mResMgGcC5Hvk6QD\r\nm=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\nc=IN IP4 0.0.0.0\r\na=ice-ufrag:EFpC\r\na=ice-pwd:WjgMyF002/W7Dee9ugvIeXUi\r\na=ice-options:trickle\r\na=fingerprint:sha-256 79:66:CC:0B:A9:74:A7:C9:D1:69:95:DA:88:9B:1A:EA:DE:B1:D2:7D:95:9D:60:38:C0:E1:51:3D:35:0C:97:BD\r\na=setup:active\r\na=mid:2\r\na=sctp-port:5000\r\na=max-message-size:262144\r\n"}
+[2025-11-06T07:20:05.209Z] 🧊 ICE state: new
+[2025-11-06T07:20:05.209Z] 🧊 ICE state: new
+[2025-11-06T07:20:05.213Z] 📤 Sending signal: candidate {"type":"candidate","candidate":{"candidate":"candidate:968123973 1 udp 2113937151 10.161.103.17 56122 typ host generation 0 ufrag EFpC network-cost 999","sdpMLineIndex":0,"sdpMid":"0"}}
+[2025-11-06T07:20:05.213Z] 📤 Sending signal: candidate {"type":"candidate","candidate":{"candidate":"candidate:968123973 1 udp 2113937151 10.161.103.17 56122 typ host generation 0 ufrag EFpC network-cost 999","sdpMLineIndex":0,"sdpMid":"0"}}
+[2025-11-06T07:20:05.383Z] 📹 Found 3 cameras
+[2025-11-06T07:20:05.383Z] 📹 Found 3 cameras
+[2025-11-06T07:20:05.383Z] 📱 Switch camera visible - hiding fullscreen button
+[2025-11-06T07:20:05.383Z] 📱 Switch camera visible - hiding fullscreen button
+[2025-11-06T07:20:05.722Z] 📤 Sending signal: candidate {"type":"candidate","candidate":{"candidate":"candidate:2617271998 1 udp 1677729535 46.199.19.17 56122 typ srflx raddr 10.161.103.17 rport 56122 generation 0 ufrag EFpC network-cost 999","sdpMLineIndex":0,"sdpMid":"0"}}
+[2025-11-06T07:20:05.722Z] 📤 Sending signal: candidate {"type":"candidate","candidate":{"candidate":"candidate:2617271998 1 udp 1677729535 46.199.19.17 56122 typ srflx raddr 10.161.103.17 rport 56122 generation 0 ufrag EFpC network-cost 999","sdpMLineIndex":0,"sdpMid":"0"}}
+[2025-11-06T07:20:22.235Z] 📹 Switching to camera: ef6eb11ba0b2e7db6a64315bca8f8c9967eadbd172f640bce3acedd3a7d79cda
+[2025-11-06T07:20:22.235Z] 📹 Switching to camera: ef6eb11ba0b2e7db6a64315bca8f8c9967eadbd172f640bce3acedd3a7d79cda
+[2025-11-06T07:20:23.869Z] WARN: ⚠️ Ideal constraint failed, trying exact...
+[2025-11-06T07:20:25.272Z] ERROR: Error switching camera: {}
