@@ -303,24 +303,24 @@ function initWebSocket() {
           // Host: we'll keep it visible until client joins (so they can share the link)
           // Client: it should already be hidden if joining existing room
           
-          // IMPORTANT: If we have queued signals (client received offer before stream was ready),
-          // create peer connection immediately to process them
+          // IMPORTANT: Create peer connection when stream is ready
+          // For client: if we have queued signals (offer received before stream was ready), process them
+          // For client: even without queued signals, create peer to be ready for incoming offer
+          // For host: create peer to generate offer
           const peerIsValid = isPeerValid(peer);
-          if (queuedIncomingSignals.length > 0 && !peerIsValid) {
-            log(`⚡ Stream ready with ${queuedIncomingSignals.length} queued signals - creating peer immediately...`);
+          if (!peerIsValid) {
+            if (queuedIncomingSignals.length > 0) {
+              log(`⚡ Stream ready with ${queuedIncomingSignals.length} queued signals - creating peer immediately...`);
+            } else if (isHost) {
+              log("⚡ Host stream ready - creating peer connection...");
+            } else {
+              log("⚡ Client stream ready - creating peer connection (will process offer when received)...");
+            }
             if (peer && peer.destroyed) {
               peer = null; // Clean up destroyed peer reference
             }
             createPeerConnection(stream);
-          } else if (isHost && !peerIsValid) {
-            // For host, create peer connection when stream is ready (will generate offer)
-            // This is a fallback in case room-info hasn't arrived yet
-            log("⚡ Host stream ready - creating peer connection...");
-            if (peer && peer.destroyed) {
-              peer = null; // Clean up destroyed peer reference
-            }
-            createPeerConnection(stream);
-          } else if (peerIsValid) {
+          } else {
             log("✅ Peer already exists and is valid, stream ready");
           }
           
@@ -1254,11 +1254,13 @@ async function switchToCamera(deviceId) {
     // IMPORTANT: Stop the old video track FIRST before requesting a new one
     // This prevents "camera in use" errors and ensures we can switch cameras smoothly
     const oldVideoTrack = localStream.getVideoTracks()[0];
+    let oldTrackStopped = false;
     if (oldVideoTrack) {
       log("🛑 Stopping old video track before switching...");
       oldVideoTrack.stop();
-      // Remove old track from stream
-      localStream.removeTrack(oldVideoTrack);
+      oldTrackStopped = true;
+      // Small delay to ensure track is fully released before requesting new one
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
     
     // Get new video track with selected camera
@@ -1266,7 +1268,9 @@ async function switchToCamera(deviceId) {
     // Only request video (no audio) to ensure we're reusing permission, not requesting new one
     // Use simple deviceId constraint - should work on most devices without multiple attempts
     log("📹 Requesting new camera stream...");
-    const newStream = await navigator.mediaDevices.getUserMedia({
+    
+    // Add timeout to prevent hanging
+    const getUserMediaPromise = navigator.mediaDevices.getUserMedia({
       video: { 
         deviceId: deviceId, // Simple deviceId - works on most devices
         width: CONFIG.VIDEO.width,
@@ -1274,6 +1278,13 @@ async function switchToCamera(deviceId) {
       }
       // No audio property - reusing existing permission
     });
+    
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("getUserMedia timeout after 10 seconds")), 10000);
+    });
+    
+    const newStream = await Promise.race([getUserMediaPromise, timeoutPromise]);
+    log("✅ New camera stream obtained");
     
     const newVideoTrack = newStream.getVideoTracks()[0];
     if (!newVideoTrack) {
@@ -1306,12 +1317,18 @@ async function switchToCamera(deviceId) {
       }
     }
     
-    // Old video track was already stopped above, no need to stop again
-    
     // Replace the entire stream in the video element
     // This is more reliable than trying to modify the existing stream
     localStream = updatedStream;
     localVideo.srcObject = updatedStream;
+    
+    // Ensure video plays with new stream
+    const playPromise = localVideo.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((err) => {
+        logWarn("⚠️ Error playing local video after camera switch:", err);
+      });
+    }
     
     // Stop the temporary stream tracks (we only needed the video track)
     newStream.getTracks().forEach(track => {
