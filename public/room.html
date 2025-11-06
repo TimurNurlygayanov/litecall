@@ -18,7 +18,7 @@
 
     html, body {
       margin: 0;
-      background: #000;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Match waiting screen background */
       height: 100%;
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -124,13 +124,13 @@
     
     /* Ensure controls are hidden initially until JS loads and shows them */
     #controls {
-      display: none !important; /* Force hidden until JS explicitly shows it */
+      display: none; /* Hidden until JS explicitly shows it with inline style */
     }
     
     /* Ensure video elements are hidden initially until JS loads and shows them */
     #remote,
     #local {
-      display: none !important; /* Force hidden until JS explicitly shows it */
+      display: none; /* Hidden until JS explicitly shows it with inline style */
     }
 
     /* When host is streaming, make background semi-transparent so video shows through */
