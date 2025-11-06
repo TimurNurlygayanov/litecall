@@ -1015,6 +1015,11 @@ function createPeerConnection(stream) {
     remoteVideo.srcObject = stream;
     log("📹 Remote stream set to video element");
     
+    // IMPORTANT: For MediaStream sources, we should NOT call load() as it resets the element
+    // Instead, ensure the video element is ready and try to play immediately
+    // The video should automatically start processing when srcObject is set
+    log("🔄 Video element ready, stream should start processing automatically");
+    
     // Monitor stream for track changes
     stream.onaddtrack = (event) => {
       log(`➕ Track added to remote stream: ${event.track.kind} (${event.track.label || 'unnamed'})`);
@@ -1245,14 +1250,26 @@ function createPeerConnection(stream) {
             const currentSrc = remoteVideo.srcObject;
             if (currentSrc) {
               logWarn("🔄 Video frozen - attempting to refresh");
+              const tracks = currentSrc.getTracks();
+              logWarn(`🔄 Refreshing video - stream has ${tracks.length} tracks`);
+              tracks.forEach(track => {
+                logWarn(`🔄 Track: ${track.kind}, enabled: ${track.enabled}, readyState: ${track.readyState}, muted: ${track.muted}`);
+              });
               remoteVideo.srcObject = null;
               setTimeout(() => {
                 remoteVideo.srcObject = currentSrc;
                 remoteVideo.load(); // Force reload
-                remoteVideo.play().catch(err => {
+                // Ensure video attributes are set
+                remoteVideo.setAttribute("playsinline", "true");
+                remoteVideo.setAttribute("webkit-playsinline", "true");
+                remoteVideo.setAttribute("autoplay", "true");
+                remoteVideo.muted = true; // Start muted for autoplay
+                remoteVideo.play().then(() => {
+                  logWarn("✅ Video refreshed and playing");
+                  lastTimeUpdate = Date.now(); // Reset timer
+                }).catch(err => {
                   logWarn("⚠️ Failed to play after refresh:", err);
                 });
-                lastTimeUpdate = Date.now(); // Reset timer
               }, 100);
             }
           }
@@ -1275,16 +1292,24 @@ function createPeerConnection(stream) {
               if (remoteVideo.currentTime === lastCurrentTime) {
                 logWarn("🔄 Video still frozen - attempting to refresh");
                 const currentSrc = remoteVideo.srcObject;
-                if (currentSrc) {
-                  remoteVideo.srcObject = null;
-                  setTimeout(() => {
-                    remoteVideo.srcObject = currentSrc;
-                    remoteVideo.load(); // Force reload
-                    remoteVideo.play().catch(err => {
-                      logWarn("⚠️ Failed to play after refresh:", err);
-                    });
-                  }, 100);
-                }
+                  if (currentSrc) {
+                    logWarn("🔄 Video still frozen - attempting refresh");
+                    remoteVideo.srcObject = null;
+                    setTimeout(() => {
+                      remoteVideo.srcObject = currentSrc;
+                      remoteVideo.load(); // Force reload
+                      // Ensure video attributes are set
+                      remoteVideo.setAttribute("playsinline", "true");
+                      remoteVideo.setAttribute("webkit-playsinline", "true");
+                      remoteVideo.setAttribute("autoplay", "true");
+                      remoteVideo.muted = true; // Start muted for autoplay
+                      remoteVideo.play().then(() => {
+                        logWarn("✅ Video refreshed and playing");
+                      }).catch(err => {
+                        logWarn("⚠️ Failed to play after refresh:", err);
+                      });
+                    }, 100);
+                  }
               }
             }, 1000);
           }
@@ -1315,13 +1340,61 @@ function createPeerConnection(stream) {
       videoTracks[0].addEventListener("ended", cleanupFrozenCheck);
     }
     
-    // Monitor video element state changes for debugging
-    remoteVideo.addEventListener("loadstart", () => log("📹 Remote video: loadstart"));
-    remoteVideo.addEventListener("loadedmetadata", () => log("📹 Remote video: loadedmetadata (readyState: " + remoteVideo.readyState + ")"));
-    remoteVideo.addEventListener("loadeddata", () => log("📹 Remote video: loadeddata (readyState: " + remoteVideo.readyState + ")"));
-    remoteVideo.addEventListener("canplay", () => log("📹 Remote video: canplay (readyState: " + remoteVideo.readyState + ")"));
-    remoteVideo.addEventListener("canplaythrough", () => log("📹 Remote video: canplaythrough (readyState: " + remoteVideo.readyState + ")"));
-    remoteVideo.addEventListener("playing", () => log("📹 Remote video: playing event"));
+    // Monitor video element state changes for debugging and force play
+    remoteVideo.addEventListener("loadstart", () => {
+      log("📹 Remote video: loadstart (readyState: " + remoteVideo.readyState + ")");
+      // After loadstart, ensure video is set to play
+      if (remoteVideo.paused) {
+        log("🔄 Video paused after loadstart, attempting to play...");
+        remoteVideo.play().catch(err => {
+          logWarn("⚠️ Failed to play after loadstart:", err);
+        });
+      }
+    });
+    remoteVideo.addEventListener("loadedmetadata", () => {
+      log("📹 Remote video: loadedmetadata (readyState: " + remoteVideo.readyState + ")");
+      // Metadata loaded - video should be ready to play
+      if (remoteVideo.paused) {
+        log("🔄 Video paused after loadedmetadata, attempting to play...");
+        remoteVideo.play().catch(err => {
+          logWarn("⚠️ Failed to play after loadedmetadata:", err);
+        });
+      }
+    });
+    remoteVideo.addEventListener("loadeddata", () => {
+      log("📹 Remote video: loadeddata (readyState: " + remoteVideo.readyState + ")");
+      // Data loaded - video should definitely be ready
+      if (remoteVideo.paused) {
+        log("🔄 Video paused after loadeddata, attempting to play...");
+        remoteVideo.play().catch(err => {
+          logWarn("⚠️ Failed to play after loadeddata:", err);
+        });
+      }
+    });
+    remoteVideo.addEventListener("canplay", () => {
+      log("📹 Remote video: canplay (readyState: " + remoteVideo.readyState + ")");
+      // Video can play - ensure it's playing
+      if (remoteVideo.paused) {
+        log("🔄 Video paused after canplay, attempting to play...");
+        remoteVideo.play().catch(err => {
+          logWarn("⚠️ Failed to play after canplay:", err);
+        });
+      }
+    });
+    remoteVideo.addEventListener("canplaythrough", () => {
+      log("📹 Remote video: canplaythrough (readyState: " + remoteVideo.readyState + ")");
+      // Video can play through - definitely should be playing
+      if (remoteVideo.paused) {
+        log("🔄 Video paused after canplaythrough, attempting to play...");
+        remoteVideo.play().catch(err => {
+          logWarn("⚠️ Failed to play after canplaythrough:", err);
+        });
+      }
+    });
+    // Also listen for 'playing' event to confirm video is actually playing
+    remoteVideo.addEventListener("playing", () => {
+      log("✅ Remote video: playing event fired (readyState: " + remoteVideo.readyState + ", currentTime: " + remoteVideo.currentTime.toFixed(2) + "s)");
+    });
     remoteVideo.addEventListener("pause", () => logWarn("⚠️ Remote video: paused"));
     remoteVideo.addEventListener("error", (e) => {
       logWarn("❌ Remote video error:", e);
