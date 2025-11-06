@@ -308,9 +308,11 @@ function initWebSocket() {
             log("✨ Making waiting screen semi-transparent so video shows through");
           }
           
-          // For clients: when camera is accepted, hide waiting screen and show controls
+          // For clients: when camera is accepted, hide waiting screen (and loading spinner) and show controls
           if (!isHost && waitingScreen) {
             log("👤 Client: camera accepted, hiding waiting screen and showing controls...");
+            // Hide loading indicator
+            waitingScreen.classList.remove("show-loading");
             // Hide the empty magenta waiting screen now that streaming has started
             waitingScreen.classList.add("hidden");
             if (controls) {
@@ -423,6 +425,8 @@ function initWebSocket() {
         // until a client actually joins (so host can share the link)
         if (isHost && waitingScreen) {
           log("👤 Host detected, showing controls but keeping link widget visible...");
+          // Hide loading indicator for hosts
+          waitingScreen.classList.remove("show-loading");
           // Show the link widget for hosts
           waitingScreen.classList.add("show-link-widget");
           // Don't hide waiting screen yet - keep it visible so host can share the link
@@ -443,11 +447,11 @@ function initWebSocket() {
           }
         }
         
-        // If client joins and host is already active (totalClients > 1), hide link widget but keep empty magenta screen
-        // Client should never see "share link" widget - show empty magenta background until streaming starts
+        // If client joins and host is already active (totalClients > 1), hide link widget but show loading spinner
+        // Client should never see "share link" widget - show loading spinner until streaming starts
         if (!isHost && data.totalClients > 1 && waitingScreen) {
-          log("👥 Host already active, hiding link widget for client (client joining existing room)...");
-          // Hide the link widget and title - show empty magenta screen
+          log("👥 Host already active, showing loading spinner for client (client joining existing room)...");
+          // Hide the link widget and title - show loading spinner
           if (linkWidget) {
             linkWidget.style.display = "none";
           }
@@ -457,7 +461,9 @@ function initWebSocket() {
           if (waitingContent) {
             waitingContent.style.display = "none";
           }
-          // Keep waiting screen visible (empty magenta background) until camera is accepted
+          // Show loading indicator
+          waitingScreen.classList.add("show-loading");
+          // Keep waiting screen visible (magenta background with loading spinner) until camera is accepted
           // Don't show controls yet - wait for camera permission
           // Local video will be shown once getUserMedia succeeds
         }
@@ -1197,8 +1203,44 @@ function createPeerConnection(stream) {
     remoteVideo.addEventListener("loadeddata", videoPlayingHandler, { once: true });
     
     // Also listen for timeupdate - this means video is actually playing
+    // Use a persistent listener to continuously monitor for frozen frames
     let lastCurrentTime = 0;
+    let lastTimeUpdate = Date.now();
     let frozenFrameDetected = false;
+    let frozenFrameCheckInterval = null;
+    
+    const checkFrozenFrame = () => {
+      if (!remoteVideo.paused && remoteVideo.currentTime > 0) {
+        const now = Date.now();
+        const timeSinceLastUpdate = now - lastTimeUpdate;
+        
+        // If timeupdate hasn't fired in 2 seconds, video might be frozen
+        if (timeSinceLastUpdate > 2000 && lastCurrentTime > 0) {
+          if (!frozenFrameDetected) {
+            frozenFrameDetected = true;
+            logWarn("⚠️ Possible frozen frame detected - no timeupdate for " + timeSinceLastUpdate + "ms");
+            // Try to force video refresh
+            const currentSrc = remoteVideo.srcObject;
+            if (currentSrc) {
+              logWarn("🔄 Video frozen - attempting to refresh");
+              remoteVideo.srcObject = null;
+              setTimeout(() => {
+                remoteVideo.srcObject = currentSrc;
+                remoteVideo.load(); // Force reload
+                remoteVideo.play().catch(err => {
+                  logWarn("⚠️ Failed to play after refresh:", err);
+                });
+                lastTimeUpdate = Date.now(); // Reset timer
+              }, 100);
+            }
+          }
+        }
+      }
+    };
+    
+    // Check for frozen frames every second
+    frozenFrameCheckInterval = setInterval(checkFrozenFrame, 1000);
+    
     remoteVideo.addEventListener("timeupdate", () => {
       if (!remoteVideo.paused && remoteVideo.currentTime > 0) {
         // Detect if video is frozen (time not advancing)
@@ -1211,18 +1253,22 @@ function createPeerConnection(stream) {
               if (remoteVideo.currentTime === lastCurrentTime) {
                 logWarn("🔄 Video still frozen - attempting to refresh");
                 const currentSrc = remoteVideo.srcObject;
-                remoteVideo.srcObject = null;
-                setTimeout(() => {
-                  remoteVideo.srcObject = currentSrc;
-                  remoteVideo.play().catch(err => {
-                    logWarn("⚠️ Failed to play after refresh:", err);
-                  });
-                }, 100);
+                if (currentSrc) {
+                  remoteVideo.srcObject = null;
+                  setTimeout(() => {
+                    remoteVideo.srcObject = currentSrc;
+                    remoteVideo.load(); // Force reload
+                    remoteVideo.play().catch(err => {
+                      logWarn("⚠️ Failed to play after refresh:", err);
+                    });
+                  }, 100);
+                }
               }
             }, 1000);
           }
         } else {
           frozenFrameDetected = false;
+          lastTimeUpdate = Date.now(); // Update timestamp when video is playing
         }
         lastCurrentTime = remoteVideo.currentTime;
         
@@ -1231,7 +1277,21 @@ function createPeerConnection(stream) {
           videoPlayingHandler();
         }
       }
-    }, { once: true });
+    });
+    
+    // Cleanup interval when video element is removed or stream changes
+    const cleanupFrozenCheck = () => {
+      if (frozenFrameCheckInterval) {
+        clearInterval(frozenFrameCheckInterval);
+        frozenFrameCheckInterval = null;
+      }
+    };
+    
+    // Cleanup on stream end or element removal
+    remoteVideo.addEventListener("emptied", cleanupFrozenCheck);
+    if (videoTracks.length > 0) {
+      videoTracks[0].addEventListener("ended", cleanupFrozenCheck);
+    }
     
     // Monitor video element state changes for debugging
     remoteVideo.addEventListener("loadstart", () => log("📹 Remote video: loadstart"));
@@ -2045,5 +2105,23 @@ if (btnCopyLogs) {
 }
 
 // ====== Start ======
-console.log("🔵 Starting WebSocket connection...");
-initWebSocket();
+// Show loading indicator initially for clients (will be hidden when role is determined)
+// This provides immediate feedback while waiting for connection
+const loadingIndicator = document.getElementById("loading-indicator");
+if (loadingIndicator && waitingScreen) {
+  // Show loading by default - will be hidden for hosts or when stream starts
+  waitingScreen.classList.add("show-loading");
+}
+
+// Wait for DOM to be ready before starting WebSocket
+// This improves page load time by not blocking initial render
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log("🔵 Starting WebSocket connection...");
+    initWebSocket();
+  });
+} else {
+  // DOM already loaded
+  console.log("🔵 Starting WebSocket connection...");
+  initWebSocket();
+}
