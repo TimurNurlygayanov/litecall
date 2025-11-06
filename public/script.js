@@ -1015,10 +1015,22 @@ function createPeerConnection(stream) {
     remoteVideo.srcObject = stream;
     log("📹 Remote stream set to video element");
     
-    // IMPORTANT: For MediaStream sources, we should NOT call load() as it resets the element
-    // Instead, ensure the video element is ready and try to play immediately
-    // The video should automatically start processing when srcObject is set
-    log("🔄 Video element ready, stream should start processing automatically");
+    // CRITICAL FIX: On some browsers (especially mobile), the video element needs
+    // to be explicitly told to process the MediaStream. Try playing immediately
+    // even if readyState is 0 - sometimes this forces the browser to start processing.
+    // Also ensure all attributes are set before attempting play.
+    log("🔄 Attempting immediate play to force video processing...");
+    const immediatePlayPromise = remoteVideo.play();
+    if (immediatePlayPromise !== undefined) {
+      immediatePlayPromise
+        .then(() => {
+          log("✅ Immediate play succeeded - video should start processing");
+        })
+        .catch((err) => {
+          logWarn("⚠️ Immediate play failed (expected on some browsers):", err?.name);
+          // This is expected on some browsers - the video will start when ready
+        });
+    }
     
     // Monitor stream for track changes
     stream.onaddtrack = (event) => {
@@ -1139,6 +1151,11 @@ function createPeerConnection(stream) {
       tryPlay();
     } else {
       log("📹 Waiting for video data before playing...");
+      // CRITICAL FIX: Try playing immediately even if readyState is 0
+      // Some browsers (especially mobile) need this to start processing the stream
+      log("🔄 Attempting play with readyState 0 (may be needed to start processing)...");
+      tryPlay();
+      
       const dataHandler = () => {
         log("📹 Video data loaded, attempting to play");
         remoteVideo.removeEventListener("loadeddata", dataHandler);
@@ -1154,6 +1171,7 @@ function createPeerConnection(stream) {
         } else {
           logWarn(`⚠️ Video still not ready after timeout (readyState: ${remoteVideo.readyState})`);
           // Try anyway - sometimes video can play even if readyState is low
+          log("🔄 Forcing play attempt despite low readyState...");
           tryPlay();
         }
       }, 500);

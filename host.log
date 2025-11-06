@@ -1,0 +1,304 @@
+[2025-11-06T11:14:43.576Z] 🔵 Script.js loaded
+[2025-11-06T11:14:43.576Z] 🔵 Room ID: t4k248
+[2025-11-06T11:14:43.577Z] 🔗 Meeting link ready: https://litecall.app/room?id=t4k248
+[2025-11-06T11:14:43.577Z] 🔗 Meeting link ready: https://litecall.app/room?id=t4k248
+[2025-11-06T11:14:43.577Z] 🔵 Starting WebSocket connection...
+[2025-11-06T11:14:44.157Z] ✅ WS open
+[2025-11-06T11:14:44.157Z] ✅ WS open
+[2025-11-06T11:14:44.157Z] 🎥 Starting media stream immediately...
+[2025-11-06T11:14:44.157Z] 🎥 Starting media stream immediately...
+[2025-11-06T11:14:44.158Z] 📋 Room info: isFirst=true, totalClients=1, newClientJoined=false
+[2025-11-06T11:14:44.158Z] 📋 Room info: isFirst=true, totalClients=1, newClientJoined=false
+[2025-11-06T11:14:44.158Z] 👤 Role: Host (was Client)
+[2025-11-06T11:14:44.158Z] 👤 Role: Host (was Client)
+[2025-11-06T11:14:44.158Z] 👤 Host detected, showing controls but keeping link widget visible...
+[2025-11-06T11:14:44.158Z] 👤 Host detected, showing controls but keeping link widget visible...
+[2025-11-06T11:14:45.558Z] 🎥 Local stream ready
+[2025-11-06T11:14:45.558Z] 🎥 Local stream ready
+[2025-11-06T11:14:45.558Z] ✨ Making waiting screen semi-transparent so video shows through
+[2025-11-06T11:14:45.558Z] ✨ Making waiting screen semi-transparent so video shows through
+[2025-11-06T11:14:45.558Z] ⚡ Host stream ready - creating peer connection...
+[2025-11-06T11:14:45.558Z] ⚡ Host stream ready - creating peer connection...
+[2025-11-06T11:14:45.558Z] 🔧 Creating peer connection. isHost = true initiator = true
+[2025-11-06T11:14:45.558Z] 🔧 Creating peer connection. isHost = true initiator = true
+[2025-11-06T11:14:45.562Z] 🔧 New peer created. Initiator = true
+[2025-11-06T11:14:45.562Z] 🔧 New peer created. Initiator = true
+[2025-11-06T11:14:45.563Z] 📹 Stream added to peer connection
+[2025-11-06T11:14:45.563Z] 📹 Stream added to peer connection
+[2025-11-06T11:14:45.563Z] 📤 Host: Waiting for offer to be generated...
+[2025-11-06T11:14:45.563Z] 📤 Host: Waiting for offer to be generated...
+[2025-11-06T11:14:45.563Z] 📋 No queued signals to process
+[2025-11-06T11:14:45.563Z] 📋 No queued signals to process
+[2025-11-06T11:14:45.571Z] 📤 Sending signal: offer (SDP length: 6217 chars)
+[2025-11-06T11:14:45.571Z] 📤 Sending signal: offer (SDP length: 6217 chars)
+[2025-11-06T11:14:45.571Z] 📤 SDP contains 0 ICE candidates
+[2025-11-06T11:14:45.571Z] 📤 SDP contains 0 ICE candidates
+[2025-11-06T11:14:45.571Z] 🧊 ICE state: new
+[2025-11-06T11:14:45.571Z] 🧊 ICE state: new
+[2025-11-06T11:14:45.571Z] 🧊 ICE gathering: gathering, connection: new, peer: new
+[2025-11-06T11:14:45.571Z] 🧊 ICE gathering: gathering, connection: new, peer: new
+[2025-11-06T11:14:45.572Z] 📤 Sending signal: candidate (host, candidate:3445276188 1 udp 2122260223 192.168.10.1...)
+[2025-11-06T11:14:45.572Z] 📤 Sending signal: candidate (host, candidate:3445276188 1 udp 2122260223 192.168.10.1...)
+[2025-11-06T11:14:45.572Z] 📤 Sending signal: candidate (host, candidate:3445276188 1 udp 2122260223 192.168.10.1...)
+[2025-11-06T11:14:45.572Z] 📤 Sending signal: candidate (host, candidate:3445276188 1 udp 2122260223 192.168.10.1...)
+[2025-11-06T11:14:45.572Z] 📤 Sending signal: candidate (host, candidate:3445276188 1 udp 2122260223 192.168.10.1...)
+[2025-11-06T11:14:45.572Z] 📤 Sending signal: candidate (host, candidate:3445276188 1 udp 2122260223 192.168.10.1...)
+[2025-11-06T11:14:45.614Z] 📤 Sending signal: candidate (srflx, candidate:1536350405 1 udp 1686052607 62.228.48.20...)
+[2025-11-06T11:14:45.614Z] 📤 Sending signal: candidate (srflx, candidate:1536350405 1 udp 1686052607 62.228.48.20...)
+[2025-11-06T11:14:45.616Z] 📤 Sending signal: candidate (srflx, candidate:1536350405 1 udp 1686052607 62.228.48.20...)
+[2025-11-06T11:14:45.616Z] 📤 Sending signal: candidate (srflx, candidate:1536350405 1 udp 1686052607 62.228.48.20...)
+[2025-11-06T11:14:45.616Z] 📤 Sending signal: candidate (srflx, candidate:1536350405 1 udp 1686052607 62.228.48.20...)
+[2025-11-06T11:14:45.616Z] 📤 Sending signal: candidate (srflx, candidate:1536350405 1 udp 1686052607 62.228.48.20...)
+[2025-11-06T11:14:45.690Z] 📤 Sending signal: candidate (host, candidate:871393928 1 tcp 1518280447 192.168.10.10...)
+[2025-11-06T11:14:45.690Z] 📤 Sending signal: candidate (host, candidate:871393928 1 tcp 1518280447 192.168.10.10...)
+[2025-11-06T11:14:45.690Z] 📤 Sending signal: candidate (host, candidate:871393928 1 tcp 1518280447 192.168.10.10...)
+[2025-11-06T11:14:45.690Z] 📤 Sending signal: candidate (host, candidate:871393928 1 tcp 1518280447 192.168.10.10...)
+[2025-11-06T11:14:45.690Z] 📤 Sending signal: candidate (host, candidate:871393928 1 tcp 1518280447 192.168.10.10...)
+[2025-11-06T11:14:45.690Z] 📤 Sending signal: candidate (host, candidate:871393928 1 tcp 1518280447 192.168.10.10...)
+[2025-11-06T11:14:45.767Z] 🧊 ICE state: new
+[2025-11-06T11:14:45.767Z] 🧊 ICE state: new
+[2025-11-06T11:14:45.767Z] 🧊 ICE gathering: complete, connection: new, peer: new
+[2025-11-06T11:14:45.767Z] 🧊 ICE gathering: complete, connection: new, peer: new
+[2025-11-06T11:14:46.565Z] ✅ Audio bitrate set: min=64kbps, max=128kbps (prioritized)
+[2025-11-06T11:14:46.565Z] ✅ Audio bitrate set: min=64kbps, max=128kbps (prioritized)
+[2025-11-06T11:14:46.565Z] ✅ Video bitrate set: min=800kbps, max=4000kbps, maxFPS=25 (quality prioritized)
+[2025-11-06T11:14:46.565Z] ✅ Video bitrate set: min=800kbps, max=4000kbps, maxFPS=25 (quality prioritized)
+[2025-11-06T11:14:56.734Z] 🔒 Preserving existing role (Host) during new client notification
+[2025-11-06T11:14:56.734Z] 🔒 Preserving existing role (Host) during new client notification
+[2025-11-06T11:14:56.734Z] 📋 Room info: isFirst=true, totalClients=2, newClientJoined=true
+[2025-11-06T11:14:56.734Z] 📋 Room info: isFirst=true, totalClients=2, newClientJoined=true
+[2025-11-06T11:14:56.734Z] 👤 Role: Host (was Host)
+[2025-11-06T11:14:56.734Z] 👤 Role: Host (was Host)
+[2025-11-06T11:14:56.734Z] 👤 Host detected, showing controls but keeping link widget visible...
+[2025-11-06T11:14:56.734Z] 👤 Host detected, showing controls but keeping link widget visible...
+[2025-11-06T11:14:56.734Z] ✨ Making waiting screen semi-transparent so video shows through
+[2025-11-06T11:14:56.734Z] ✨ Making waiting screen semi-transparent so video shows through
+[2025-11-06T11:14:56.734Z] 👥 Client has joined (totalClients > 1) - hiding waiting screen with link widget
+[2025-11-06T11:14:56.734Z] 👥 Client has joined (totalClients > 1) - hiding waiting screen with link widget
+[2025-11-06T11:14:56.734Z] ✅ Host peer is valid, client will reconnect to existing peer
+[2025-11-06T11:14:56.734Z] ✅ Host peer is valid, client will reconnect to existing peer
+[2025-11-06T11:14:56.734Z] ℹ️ Valid peer already exists (Host), skipping creation
+[2025-11-06T11:14:56.734Z] ℹ️ Valid peer already exists (Host), skipping creation
+[2025-11-06T11:14:59.427Z] 📨 Received WebSocket message: answer (4892 bytes)
+[2025-11-06T11:14:59.427Z] 📨 Received WebSocket message: answer (4892 bytes)
+[2025-11-06T11:14:59.427Z] 📥 Processing signal: answer (peer exists: true, hasConnected: false)
+[2025-11-06T11:14:59.427Z] 📥 Processing signal: answer (peer exists: true, hasConnected: false)
+[2025-11-06T11:14:59.428Z] ✅ Successfully processed signal: answer
+[2025-11-06T11:14:59.428Z] ✅ Successfully processed signal: answer
+[2025-11-06T11:14:59.428Z] 📨 Received WebSocket message: candidate (187 bytes)
+[2025-11-06T11:14:59.428Z] 📨 Received WebSocket message: candidate (187 bytes)
+[2025-11-06T11:14:59.428Z] 📥 Processing signal: candidate (peer exists: true, hasConnected: false)
+[2025-11-06T11:14:59.428Z] 📥 Processing signal: candidate (peer exists: true, hasConnected: false)
+[2025-11-06T11:14:59.428Z] ✅ Successfully processed signal: candidate
+[2025-11-06T11:14:59.428Z] ✅ Successfully processed signal: candidate
+[2025-11-06T11:14:59.432Z] 🎬 Remote stream received
+[2025-11-06T11:14:59.432Z] 🎬 Remote stream received
+[2025-11-06T11:14:59.432Z] 📊 Stream tracks: 1 video, 1 audio
+[2025-11-06T11:14:59.432Z] 📊 Stream tracks: 1 video, 1 audio
+[2025-11-06T11:14:59.432Z] 📹 Video track: b413ed76-8204-40bb-a2e4-487093bff722, enabled: true, readyState: live
+[2025-11-06T11:14:59.432Z] 📹 Video track: b413ed76-8204-40bb-a2e4-487093bff722, enabled: true, readyState: live
+[2025-11-06T11:14:59.432Z] 🔊 Audio track: 3228d561-f269-4129-bf87-357459044f34, enabled: true, readyState: live
+[2025-11-06T11:14:59.432Z] 🔊 Audio track: 3228d561-f269-4129-bf87-357459044f34, enabled: true, readyState: live
+[2025-11-06T11:14:59.432Z] 📹 Remote stream set to video element
+[2025-11-06T11:14:59.432Z] 📹 Remote stream set to video element
+[2025-11-06T11:14:59.432Z] 🔄 Video element ready, stream should start processing automatically
+[2025-11-06T11:14:59.432Z] 🔄 Video element ready, stream should start processing automatically
+[2025-11-06T11:14:59.432Z] 🔇 Remote video muted for autoplay
+[2025-11-06T11:14:59.432Z] 🔇 Remote video muted for autoplay
+[2025-11-06T11:14:59.432Z] 👁️ Remote video element made visible
+[2025-11-06T11:14:59.432Z] 👁️ Remote video element made visible
+[2025-11-06T11:14:59.432Z] 📹 Waiting for video data before playing...
+[2025-11-06T11:14:59.432Z] 📹 Waiting for video data before playing...
+[2025-11-06T11:14:59.432Z] ✅ Remote video track unmuted
+[2025-11-06T11:14:59.432Z] ✅ Remote video track unmuted
+[2025-11-06T11:14:59.438Z] 🧊 ICE state: checking
+[2025-11-06T11:14:59.438Z] 🧊 ICE state: checking
+[2025-11-06T11:14:59.438Z] 🧊 ICE gathering: complete, connection: checking, peer: new
+[2025-11-06T11:14:59.438Z] 🧊 ICE gathering: complete, connection: checking, peer: new
+[2025-11-06T11:14:59.438Z] 📹 Remote video: loadstart (readyState: 0)
+[2025-11-06T11:14:59.438Z] 📹 Remote video: loadstart (readyState: 0)
+[2025-11-06T11:14:59.438Z] 🔄 Video paused after loadstart, attempting to play...
+[2025-11-06T11:14:59.438Z] 🔄 Video paused after loadstart, attempting to play...
+[2025-11-06T11:14:59.624Z] 📨 Received WebSocket message: candidate (219 bytes)
+[2025-11-06T11:14:59.624Z] 📨 Received WebSocket message: candidate (219 bytes)
+[2025-11-06T11:14:59.624Z] 📥 Processing signal: candidate (peer exists: true, hasConnected: false)
+[2025-11-06T11:14:59.624Z] 📥 Processing signal: candidate (peer exists: true, hasConnected: false)
+[2025-11-06T11:14:59.624Z] ✅ Successfully processed signal: candidate
+[2025-11-06T11:14:59.624Z] ✅ Successfully processed signal: candidate
+[2025-11-06T11:14:59.754Z] 🧊 ICE state: connected
+[2025-11-06T11:14:59.754Z] 🧊 ICE state: connected
+[2025-11-06T11:14:59.754Z] 🧊 ICE gathering: complete, connection: connected, peer: connecting
+[2025-11-06T11:14:59.754Z] 🧊 ICE gathering: complete, connection: connected, peer: connecting
+[2025-11-06T11:14:59.937Z] WARN: ⚠️ Video still not ready after timeout (readyState: 0)
+[2025-11-06T11:14:59.937Z] 🎬 Attempting to play remote video (readyState: 0, paused: false, muted: true)
+[2025-11-06T11:14:59.937Z] 🎬 Attempting to play remote video (readyState: 0, paused: false, muted: true)
+[2025-11-06T11:15:00.471Z] ✅ Remote video confirmed playing
+[2025-11-06T11:15:00.471Z] ✅ Remote video confirmed playing
+[2025-11-06T11:15:00.471Z] 📹 Remote video: loadedmetadata (readyState: 4)
+[2025-11-06T11:15:00.471Z] 📹 Remote video: loadedmetadata (readyState: 4)
+[2025-11-06T11:15:00.471Z] 📹 Video data loaded, attempting to play
+[2025-11-06T11:15:00.471Z] 📹 Video data loaded, attempting to play
+[2025-11-06T11:15:00.471Z] 🎬 Attempting to play remote video (readyState: 4, paused: false, muted: true)
+[2025-11-06T11:15:00.471Z] 🎬 Attempting to play remote video (readyState: 4, paused: false, muted: true)
+[2025-11-06T11:15:00.471Z] 📹 Remote video: loadeddata (readyState: 4)
+[2025-11-06T11:15:00.471Z] 📹 Remote video: loadeddata (readyState: 4)
+[2025-11-06T11:15:00.471Z] 📹 Remote video: canplay (readyState: 4)
+[2025-11-06T11:15:00.471Z] 📹 Remote video: canplay (readyState: 4)
+[2025-11-06T11:15:00.471Z] ✅ Remote video: playing event fired (readyState: 4, currentTime: 0.17s)
+[2025-11-06T11:15:00.471Z] ✅ Remote video: playing event fired (readyState: 4, currentTime: 0.17s)
+[2025-11-06T11:15:00.472Z] ✅ Remote video started playing (muted)
+[2025-11-06T11:15:00.472Z] ✅ Remote video started playing (muted)
+[2025-11-06T11:15:00.472Z] ✅ Remote video started playing (muted)
+[2025-11-06T11:15:00.472Z] ✅ Remote video started playing (muted)
+[2025-11-06T11:15:00.472Z] 📹 Remote video: canplaythrough (readyState: 4)
+[2025-11-06T11:15:00.472Z] 📹 Remote video: canplaythrough (readyState: 4)
+[2025-11-06T11:15:00.735Z] ✅ Remote video timeupdate - video is playing (currentTime: 0.20s)
+[2025-11-06T11:15:00.735Z] ✅ Remote video timeupdate - video is playing (currentTime: 0.20s)
+[2025-11-06T11:15:00.836Z] ✅ Peer connected!
+[2025-11-06T11:15:00.836Z] ✅ Peer connected!
+[2025-11-06T11:15:01.269Z] ✅ Remote video timeupdate - video is playing (currentTime: 0.60s)
+[2025-11-06T11:15:01.269Z] ✅ Remote video timeupdate - video is playing (currentTime: 0.60s)
+[2025-11-06T11:15:01.337Z] ✅ Audio bitrate set: min=64kbps, max=128kbps (prioritized for quality)
+[2025-11-06T11:15:01.337Z] ✅ Audio bitrate set: min=64kbps, max=128kbps (prioritized for quality)
+[2025-11-06T11:15:01.338Z] ✅ Video bitrate set: min=800kbps, max=4000kbps, maxFPS=25 (quality prioritized)
+[2025-11-06T11:15:01.338Z] ✅ Video bitrate set: min=800kbps, max=4000kbps, maxFPS=25 (quality prioritized)
+[2025-11-06T11:15:01.433Z] ✅ Video is already playing
+[2025-11-06T11:15:01.433Z] ✅ Video is already playing
+[2025-11-06T11:15:01.535Z] ✅ Remote video timeupdate - video is playing (currentTime: 0.87s)
+[2025-11-06T11:15:01.535Z] ✅ Remote video timeupdate - video is playing (currentTime: 0.87s)
+[2025-11-06T11:15:01.796Z] ✅ Remote video timeupdate - video is playing (currentTime: 1.14s)
+[2025-11-06T11:15:01.796Z] ✅ Remote video timeupdate - video is playing (currentTime: 1.14s)
+[2025-11-06T11:15:02.064Z] ✅ Remote video timeupdate - video is playing (currentTime: 1.48s)
+[2025-11-06T11:15:02.064Z] ✅ Remote video timeupdate - video is playing (currentTime: 1.48s)
+[2025-11-06T11:15:02.333Z] ✅ Remote video timeupdate - video is playing (currentTime: 1.79s)
+[2025-11-06T11:15:02.333Z] ✅ Remote video timeupdate - video is playing (currentTime: 1.79s)
+[2025-11-06T11:15:02.593Z] ✅ Remote video timeupdate - video is playing (currentTime: 2.11s)
+[2025-11-06T11:15:02.593Z] ✅ Remote video timeupdate - video is playing (currentTime: 2.11s)
+[2025-11-06T11:15:02.860Z] ✅ Remote video timeupdate - video is playing (currentTime: 2.36s)
+[2025-11-06T11:15:02.860Z] ✅ Remote video timeupdate - video is playing (currentTime: 2.36s)
+[2025-11-06T11:15:03.127Z] ✅ Remote video timeupdate - video is playing (currentTime: 2.51s)
+[2025-11-06T11:15:03.127Z] ✅ Remote video timeupdate - video is playing (currentTime: 2.51s)
+[2025-11-06T11:15:03.396Z] ✅ Remote video timeupdate - video is playing (currentTime: 2.89s)
+[2025-11-06T11:15:03.396Z] ✅ Remote video timeupdate - video is playing (currentTime: 2.89s)
+[2025-11-06T11:15:03.924Z] ✅ Remote video timeupdate - video is playing (currentTime: 3.18s)
+[2025-11-06T11:15:03.924Z] ✅ Remote video timeupdate - video is playing (currentTime: 3.18s)
+[2025-11-06T11:15:04.188Z] ✅ Remote video timeupdate - video is playing (currentTime: 3.57s)
+[2025-11-06T11:15:04.188Z] ✅ Remote video timeupdate - video is playing (currentTime: 3.57s)
+[2025-11-06T11:15:04.435Z] ✅ Video is already playing
+[2025-11-06T11:15:04.435Z] ✅ Video is already playing
+[2025-11-06T11:15:04.456Z] ✅ Remote video timeupdate - video is playing (currentTime: 3.91s)
+[2025-11-06T11:15:04.456Z] ✅ Remote video timeupdate - video is playing (currentTime: 3.91s)
+[2025-11-06T11:15:04.723Z] ✅ Remote video timeupdate - video is playing (currentTime: 4.25s)
+[2025-11-06T11:15:04.723Z] ✅ Remote video timeupdate - video is playing (currentTime: 4.25s)
+[2025-11-06T11:15:04.989Z] ✅ Remote video timeupdate - video is playing (currentTime: 4.41s)
+[2025-11-06T11:15:04.989Z] ✅ Remote video timeupdate - video is playing (currentTime: 4.41s)
+[2025-11-06T11:15:05.251Z] ✅ Remote video timeupdate - video is playing (currentTime: 4.71s)
+[2025-11-06T11:15:05.251Z] ✅ Remote video timeupdate - video is playing (currentTime: 4.71s)
+[2025-11-06T11:15:05.518Z] ✅ Remote video timeupdate - video is playing (currentTime: 4.89s)
+[2025-11-06T11:15:05.518Z] ✅ Remote video timeupdate - video is playing (currentTime: 4.89s)
+[2025-11-06T11:15:05.782Z] ✅ Remote video timeupdate - video is playing (currentTime: 5.16s)
+[2025-11-06T11:15:05.782Z] ✅ Remote video timeupdate - video is playing (currentTime: 5.16s)
+[2025-11-06T11:15:06.314Z] ✅ Remote video timeupdate - video is playing (currentTime: 5.70s)
+[2025-11-06T11:15:06.314Z] ✅ Remote video timeupdate - video is playing (currentTime: 5.70s)
+[2025-11-06T11:15:06.581Z] ✅ Remote video timeupdate - video is playing (currentTime: 5.97s)
+[2025-11-06T11:15:06.581Z] ✅ Remote video timeupdate - video is playing (currentTime: 5.97s)
+[2025-11-06T11:15:06.845Z] ✅ Remote video timeupdate - video is playing (currentTime: 6.32s)
+[2025-11-06T11:15:06.845Z] ✅ Remote video timeupdate - video is playing (currentTime: 6.32s)
+[2025-11-06T11:15:07.110Z] ✅ Remote video timeupdate - video is playing (currentTime: 6.59s)
+[2025-11-06T11:15:07.110Z] ✅ Remote video timeupdate - video is playing (currentTime: 6.59s)
+[2025-11-06T11:15:07.642Z] ✅ Remote video timeupdate - video is playing (currentTime: 7.00s)
+[2025-11-06T11:15:07.642Z] ✅ Remote video timeupdate - video is playing (currentTime: 7.00s)
+[2025-11-06T11:15:07.907Z] ✅ Remote video timeupdate - video is playing (currentTime: 7.22s)
+[2025-11-06T11:15:07.907Z] ✅ Remote video timeupdate - video is playing (currentTime: 7.22s)
+[2025-11-06T11:15:08.171Z] ✅ Remote video timeupdate - video is playing (currentTime: 7.37s)
+[2025-11-06T11:15:08.171Z] ✅ Remote video timeupdate - video is playing (currentTime: 7.37s)
+[2025-11-06T11:15:08.438Z] ✅ Remote video timeupdate - video is playing (currentTime: 7.59s)
+[2025-11-06T11:15:08.438Z] ✅ Remote video timeupdate - video is playing (currentTime: 7.59s)
+[2025-11-06T11:15:08.703Z] ✅ Remote video timeupdate - video is playing (currentTime: 8.15s)
+[2025-11-06T11:15:08.703Z] ✅ Remote video timeupdate - video is playing (currentTime: 8.15s)
+[2025-11-06T11:15:08.971Z] ✅ Remote video timeupdate - video is playing (currentTime: 8.35s)
+[2025-11-06T11:15:08.971Z] ✅ Remote video timeupdate - video is playing (currentTime: 8.35s)
+[2025-11-06T11:15:09.504Z] ✅ Remote video timeupdate - video is playing (currentTime: 8.83s)
+[2025-11-06T11:15:09.504Z] ✅ Remote video timeupdate - video is playing (currentTime: 8.83s)
+[2025-11-06T11:15:10.031Z] ✅ Remote video timeupdate - video is playing (currentTime: 9.03s)
+[2025-11-06T11:15:10.031Z] ✅ Remote video timeupdate - video is playing (currentTime: 9.03s)
+[2025-11-06T11:15:10.300Z] ✅ Remote video timeupdate - video is playing (currentTime: 9.23s)
+[2025-11-06T11:15:10.300Z] ✅ Remote video timeupdate - video is playing (currentTime: 9.23s)
+[2025-11-06T11:15:10.563Z] ✅ Remote video timeupdate - video is playing (currentTime: 9.47s)
+[2025-11-06T11:15:10.563Z] ✅ Remote video timeupdate - video is playing (currentTime: 9.47s)
+[2025-11-06T11:15:10.831Z] ✅ Remote video timeupdate - video is playing (currentTime: 9.68s)
+[2025-11-06T11:15:10.831Z] ✅ Remote video timeupdate - video is playing (currentTime: 9.68s)
+[2025-11-06T11:15:11.096Z] ✅ Remote video timeupdate - video is playing (currentTime: 9.96s)
+[2025-11-06T11:15:11.096Z] ✅ Remote video timeupdate - video is playing (currentTime: 9.96s)
+[2025-11-06T11:15:11.363Z] ✅ Remote video timeupdate - video is playing (currentTime: 10.35s)
+[2025-11-06T11:15:11.363Z] ✅ Remote video timeupdate - video is playing (currentTime: 10.35s)
+[2025-11-06T11:15:11.625Z] ✅ Remote video timeupdate - video is playing (currentTime: 10.71s)
+[2025-11-06T11:15:11.625Z] ✅ Remote video timeupdate - video is playing (currentTime: 10.71s)
+[2025-11-06T11:15:11.890Z] ✅ Remote video timeupdate - video is playing (currentTime: 10.82s)
+[2025-11-06T11:15:11.890Z] ✅ Remote video timeupdate - video is playing (currentTime: 10.82s)
+[2025-11-06T11:15:12.159Z] ✅ Remote video timeupdate - video is playing (currentTime: 11.03s)
+[2025-11-06T11:15:12.160Z] ✅ Remote video timeupdate - video is playing (currentTime: 11.03s)
+[2025-11-06T11:15:12.420Z] ✅ Remote video timeupdate - video is playing (currentTime: 11.50s)
+[2025-11-06T11:15:12.420Z] ✅ Remote video timeupdate - video is playing (currentTime: 11.50s)
+[2025-11-06T11:15:12.690Z] ✅ Remote video timeupdate - video is playing (currentTime: 11.84s)
+[2025-11-06T11:15:12.690Z] ✅ Remote video timeupdate - video is playing (currentTime: 11.84s)
+[2025-11-06T11:15:12.955Z] ✅ Remote video timeupdate - video is playing (currentTime: 12.09s)
+[2025-11-06T11:15:12.955Z] ✅ Remote video timeupdate - video is playing (currentTime: 12.09s)
+[2025-11-06T11:15:13.222Z] ✅ Remote video timeupdate - video is playing (currentTime: 12.52s)
+[2025-11-06T11:15:13.222Z] ✅ Remote video timeupdate - video is playing (currentTime: 12.52s)
+[2025-11-06T11:15:13.484Z] ✅ Remote video timeupdate - video is playing (currentTime: 12.77s)
+[2025-11-06T11:15:13.484Z] ✅ Remote video timeupdate - video is playing (currentTime: 12.77s)
+[2025-11-06T11:15:13.751Z] ✅ Remote video timeupdate - video is playing (currentTime: 12.97s)
+[2025-11-06T11:15:13.751Z] ✅ Remote video timeupdate - video is playing (currentTime: 12.97s)
+[2025-11-06T11:15:14.016Z] ✅ Remote video timeupdate - video is playing (currentTime: 13.18s)
+[2025-11-06T11:15:14.016Z] ✅ Remote video timeupdate - video is playing (currentTime: 13.18s)
+[2025-11-06T11:15:14.281Z] ✅ Remote video timeupdate - video is playing (currentTime: 13.38s)
+[2025-11-06T11:15:14.281Z] ✅ Remote video timeupdate - video is playing (currentTime: 13.38s)
+[2025-11-06T11:15:14.545Z] ✅ Remote video timeupdate - video is playing (currentTime: 13.91s)
+[2025-11-06T11:15:14.545Z] ✅ Remote video timeupdate - video is playing (currentTime: 13.91s)
+[2025-11-06T11:15:14.815Z] ✅ Remote video timeupdate - video is playing (currentTime: 14.29s)
+[2025-11-06T11:15:14.815Z] ✅ Remote video timeupdate - video is playing (currentTime: 14.29s)
+[2025-11-06T11:15:15.078Z] ✅ Remote video timeupdate - video is playing (currentTime: 14.56s)
+[2025-11-06T11:15:15.078Z] ✅ Remote video timeupdate - video is playing (currentTime: 14.56s)
+[2025-11-06T11:15:15.342Z] ✅ Remote video timeupdate - video is playing (currentTime: 14.83s)
+[2025-11-06T11:15:15.342Z] ✅ Remote video timeupdate - video is playing (currentTime: 14.83s)
+[2025-11-06T11:15:15.609Z] ✅ Remote video timeupdate - video is playing (currentTime: 15.10s)
+[2025-11-06T11:15:15.609Z] ✅ Remote video timeupdate - video is playing (currentTime: 15.10s)
+[2025-11-06T11:15:15.873Z] ✅ Remote video timeupdate - video is playing (currentTime: 15.28s)
+[2025-11-06T11:15:15.873Z] ✅ Remote video timeupdate - video is playing (currentTime: 15.28s)
+[2025-11-06T11:15:16.143Z] ✅ Remote video timeupdate - video is playing (currentTime: 15.70s)
+[2025-11-06T11:15:16.143Z] ✅ Remote video timeupdate - video is playing (currentTime: 15.70s)
+[2025-11-06T11:15:16.407Z] ✅ Remote video timeupdate - video is playing (currentTime: 15.87s)
+[2025-11-06T11:15:16.407Z] ✅ Remote video timeupdate - video is playing (currentTime: 15.87s)
+[2025-11-06T11:15:16.670Z] ✅ Remote video timeupdate - video is playing (currentTime: 16.12s)
+[2025-11-06T11:15:16.670Z] ✅ Remote video timeupdate - video is playing (currentTime: 16.12s)
+[2025-11-06T11:15:16.936Z] ✅ Remote video timeupdate - video is playing (currentTime: 16.45s)
+[2025-11-06T11:15:16.936Z] ✅ Remote video timeupdate - video is playing (currentTime: 16.45s)
+[2025-11-06T11:15:17.202Z] ✅ Remote video timeupdate - video is playing (currentTime: 16.72s)
+[2025-11-06T11:15:17.202Z] ✅ Remote video timeupdate - video is playing (currentTime: 16.72s)
+[2025-11-06T11:15:17.467Z] ✅ Remote video timeupdate - video is playing (currentTime: 16.98s)
+[2025-11-06T11:15:17.467Z] ✅ Remote video timeupdate - video is playing (currentTime: 16.98s)
+[2025-11-06T11:15:17.737Z] ✅ Remote video timeupdate - video is playing (currentTime: 17.20s)
+[2025-11-06T11:15:17.737Z] ✅ Remote video timeupdate - video is playing (currentTime: 17.20s)
+[2025-11-06T11:15:17.915Z] 🔇 Mic muted
+[2025-11-06T11:15:17.915Z] 🔇 Mic muted
+[2025-11-06T11:15:17.998Z] ✅ Remote video timeupdate - video is playing (currentTime: 17.47s)
+[2025-11-06T11:15:17.998Z] ✅ Remote video timeupdate - video is playing (currentTime: 17.47s)
+[2025-11-06T11:15:18.264Z] ✅ Remote video timeupdate - video is playing (currentTime: 17.73s)
+[2025-11-06T11:15:18.264Z] ✅ Remote video timeupdate - video is playing (currentTime: 17.73s)
+[2025-11-06T11:15:18.532Z] ✅ Remote video timeupdate - video is playing (currentTime: 17.98s)
+[2025-11-06T11:15:18.532Z] ✅ Remote video timeupdate - video is playing (currentTime: 17.98s)
+[2025-11-06T11:15:18.796Z] ✅ Remote video timeupdate - video is playing (currentTime: 18.27s)
+[2025-11-06T11:15:18.796Z] ✅ Remote video timeupdate - video is playing (currentTime: 18.27s)
+[2025-11-06T11:15:19.062Z] ✅ Remote video timeupdate - video is playing (currentTime: 18.52s)
+[2025-11-06T11:15:19.062Z] ✅ Remote video timeupdate - video is playing (currentTime: 18.52s)
+[2025-11-06T11:15:19.328Z] ✅ Remote video timeupdate - video is playing (currentTime: 18.85s)
+[2025-11-06T11:15:19.328Z] ✅ Remote video timeupdate - video is playing (currentTime: 18.85s)
+[2025-11-06T11:15:19.592Z] ✅ Remote video timeupdate - video is playing (currentTime: 19.02s)
+[2025-11-06T11:15:19.592Z] ✅ Remote video timeupdate - video is playing (currentTime: 19.02s)
+[2025-11-06T11:15:19.857Z] ✅ Remote video timeupdate - video is playing (currentTime: 19.40s)
+[2025-11-06T11:15:19.857Z] ✅ Remote video timeupdate - video is playing (currentTime: 19.40s)
+[2025-11-06T11:15:20.124Z] ✅ Remote video timeupdate - video is playing (currentTime: 19.65s)
+[2025-11-06T11:15:20.124Z] ✅ Remote video timeupdate - video is playing (currentTime: 19.65s)
+[2025-11-06T11:15:20.388Z] ✅ Remote video timeupdate - video is playing (currentTime: 19.92s)
+[2025-11-06T11:15:20.388Z] ✅ Remote video timeupdate - video is playing (currentTime: 19.92s)
