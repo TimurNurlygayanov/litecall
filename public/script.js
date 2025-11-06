@@ -103,23 +103,27 @@ const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera
                        (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
 
 const CONFIG = {
-  // Media constraints - better quality for mobile
+  // Media constraints - prioritize quality over frame rate for slow connections
+  // Lower frame rate but higher quality picture
   VIDEO: isMobileDevice 
     ? { 
         width: { ideal: 1280, max: 1920 },
         height: { ideal: 720, max: 1080 },
-        frameRate: { ideal: 30, max: 30 },
+        frameRate: { ideal: 15, max: 20 }, // Lower frame rate for better quality on slow connections
         facingMode: { ideal: "user" }
       }
     : { 
         width: { ideal: 1280 },
         height: { ideal: 720 },
-        frameRate: { ideal: 30 }
+        frameRate: { ideal: 20, max: 25 } // Lower frame rate for better quality on slow connections
       },
   AUDIO: {
     echoCancellation: true,
     noiseSuppression: true,
     autoGainControl: true,
+    // Prioritize audio quality - ensure it works without issues
+    sampleRate: 48000, // High quality audio
+    channelCount: { ideal: 2 }, // Stereo if available
   },
   // Timing
   CAMERA_ENUM_DELAY: 100, // Reduced delay for faster camera detection
@@ -917,31 +921,49 @@ function createPeerConnection(stream) {
     log("✅ Peer connected!");
     hasConnected = true; // Mark that we've successfully connected
     
-    // Set bitrate when connection is established for better quality
+    // Set bitrate when connection is established
+    // Prioritize audio quality, then video quality (lower frame rate but better quality)
     setTimeout(() => {
       if (peer && peer._pc) {
         const senders = peer._pc.getSenders();
         senders.forEach(sender => {
-          if (sender.track && sender.track.kind === 'video') {
+          if (sender.track) {
             try {
               const params = sender.getParameters();
               if (!params.encodings) {
                 params.encodings = [{}];
               }
-              // Set bitrate based on device type
-              // Mobile: 2-3 Mbps, Desktop: 3-5 Mbps
-              const maxBitrate = isMobileDevice ? 3000000 : 5000000; // 3-5 Mbps
-              const minBitrate = isMobileDevice ? 500000 : 1000000; // 0.5-1 Mbps
-              params.encodings[0].maxBitrate = maxBitrate;
-              params.encodings[0].minBitrate = minBitrate;
-              params.encodings[0].maxFramerate = 30;
-              sender.setParameters(params).then(() => {
-                log(`✅ Video bitrate set on connect: min=${minBitrate/1000}kbps, max=${maxBitrate/1000}kbps`);
-              }).catch(err => {
-                logWarn("⚠️ Failed to set video bitrate on connect:", err);
-              });
+              
+              if (sender.track.kind === 'audio') {
+                // Prioritize audio quality - ensure it works without issues
+                // Higher bitrate for audio to maintain quality
+                params.encodings[0].maxBitrate = 128000; // 128 kbps for high quality audio
+                params.encodings[0].minBitrate = 64000; // 64 kbps minimum
+                sender.setParameters(params).then(() => {
+                  log(`✅ Audio bitrate set: min=64kbps, max=128kbps (prioritized for quality)`);
+                }).catch(err => {
+                  logWarn("⚠️ Failed to set audio bitrate:", err);
+                });
+              } else if (sender.track.kind === 'video') {
+                // Video: prioritize quality over frame rate
+                // Lower frame rate but higher bitrate per frame for better quality
+                const maxBitrate = isMobileDevice ? 2500000 : 4000000; // 2.5-4 Mbps (lower for slower connections)
+                const minBitrate = isMobileDevice ? 400000 : 800000; // 0.4-0.8 Mbps
+                // Lower max frame rate to allow more bitrate per frame
+                const maxFramerate = isMobileDevice ? 20 : 25;
+                params.encodings[0].maxBitrate = maxBitrate;
+                params.encodings[0].minBitrate = minBitrate;
+                params.encodings[0].maxFramerate = maxFramerate;
+                // Prioritize quality over frame rate
+                params.encodings[0].scaleResolutionDownBy = 1; // Don't scale down resolution
+                sender.setParameters(params).then(() => {
+                  log(`✅ Video bitrate set: min=${minBitrate/1000}kbps, max=${maxBitrate/1000}kbps, maxFPS=${maxFramerate} (quality prioritized)`);
+                }).catch(err => {
+                  logWarn("⚠️ Failed to set video bitrate on connect:", err);
+                });
+              }
             } catch (err) {
-              logWarn("⚠️ Error setting video bitrate on connect:", err);
+              logWarn(`⚠️ Error setting ${sender.track.kind} bitrate on connect:`, err);
             }
           }
         });
@@ -1507,32 +1529,46 @@ function createPeerConnection(stream) {
   peer.addStream(stream);
   log("📹 Stream added to peer connection");
   
-  // Set bitrate for better quality, especially on mobile
+  // Set bitrate for better quality, prioritizing audio and video quality over frame rate
   // This needs to be done after the peer connection is established
   setTimeout(() => {
     if (peer && peer._pc) {
       const senders = peer._pc.getSenders();
       senders.forEach(sender => {
-        if (sender.track && sender.track.kind === 'video') {
+        if (sender.track) {
           try {
             const params = sender.getParameters();
             if (!params.encodings) {
               params.encodings = [{}];
             }
-            // Set bitrate based on device type
-            // Mobile: 2-3 Mbps, Desktop: 3-5 Mbps
-            const maxBitrate = isMobileDevice ? 3000000 : 5000000; // 3-5 Mbps
-            const minBitrate = isMobileDevice ? 500000 : 1000000; // 0.5-1 Mbps
-            params.encodings[0].maxBitrate = maxBitrate;
-            params.encodings[0].minBitrate = minBitrate;
-            params.encodings[0].maxFramerate = 30;
-            sender.setParameters(params).then(() => {
-              log(`✅ Video bitrate set: min=${minBitrate/1000}kbps, max=${maxBitrate/1000}kbps`);
-            }).catch(err => {
-              logWarn("⚠️ Failed to set video bitrate:", err);
-            });
+            
+            if (sender.track.kind === 'audio') {
+              // Prioritize audio quality - ensure it works without issues
+              params.encodings[0].maxBitrate = 128000; // 128 kbps for high quality audio
+              params.encodings[0].minBitrate = 64000; // 64 kbps minimum
+              sender.setParameters(params).then(() => {
+                log(`✅ Audio bitrate set: min=64kbps, max=128kbps (prioritized)`);
+              }).catch(err => {
+                logWarn("⚠️ Failed to set audio bitrate:", err);
+              });
+            } else if (sender.track.kind === 'video') {
+              // Video: prioritize quality over frame rate
+              // Lower frame rate but higher bitrate per frame for better quality
+              const maxBitrate = isMobileDevice ? 2500000 : 4000000; // 2.5-4 Mbps
+              const minBitrate = isMobileDevice ? 400000 : 800000; // 0.4-0.8 Mbps
+              const maxFramerate = isMobileDevice ? 20 : 25; // Lower frame rate
+              params.encodings[0].maxBitrate = maxBitrate;
+              params.encodings[0].minBitrate = minBitrate;
+              params.encodings[0].maxFramerate = maxFramerate;
+              params.encodings[0].scaleResolutionDownBy = 1; // Don't scale down resolution
+              sender.setParameters(params).then(() => {
+                log(`✅ Video bitrate set: min=${minBitrate/1000}kbps, max=${maxBitrate/1000}kbps, maxFPS=${maxFramerate} (quality prioritized)`);
+              }).catch(err => {
+                logWarn("⚠️ Failed to set video bitrate:", err);
+              });
+            }
           } catch (err) {
-            logWarn("⚠️ Error setting video bitrate:", err);
+            logWarn(`⚠️ Error setting ${sender.track.kind} bitrate:`, err);
           }
         }
       });
@@ -1681,7 +1717,8 @@ async function switchToCamera(deviceId) {
       video: { 
         deviceId: deviceId, // Simple deviceId - works on most devices
         width: CONFIG.VIDEO.width,
-        height: CONFIG.VIDEO.height
+        height: CONFIG.VIDEO.height,
+        frameRate: CONFIG.VIDEO.frameRate // Use configured frame rate (lower for quality)
       }
       // No audio property - reusing existing permission
     });
